@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A skdm application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/skdm.exe %u
+Terminal=false
+Type=Application
+Icon=skdm.exe
+Categories=Utility;
+StartupWMClass=skdm.exe
+
+ 
