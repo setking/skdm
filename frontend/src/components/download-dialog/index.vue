@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { DownloadOutline, FolderOpenOutline, LinkOutline } from '@vicons/ionicons5'
-import { AddURI } from '@bindings/changeme/backed/api/aria2server/aria2service'
+import { Dialogs } from '@wailsio/runtime'
+import { AddURI, GetDefaultDownloadDir } from '@bindings/changeme/backed/api/apiserver/aria2service'
 import { Options } from '@bindings/github.com/siku2/arigo/models'
 
 const props = defineProps<{
@@ -13,40 +14,89 @@ const emit = defineEmits<{
 }>()
 
 const url = ref('')
-const savePath = ref('')
+const savePath = ref('./download')
 const fileName = ref('')
 const loading = ref(false)
 
-onMounted(async () => {
-  // Auto-paste URL from clipboard
+// 每次弹窗打开时重新读取保存的下载目录和剪贴板
+watch(() => props.show, async (visible) => {
+  if (!visible) return
+
+  // 从 SQLite 读取上次使用的下载目录
+  try {
+    const savedDir = await GetDefaultDownloadDir()
+    if (savedDir) {
+      savePath.value = savedDir
+    }
+  } catch {
+    // 使用默认值
+  }
+
+  // 自动从剪贴板粘贴下载链接
   try {
     const text = await navigator.clipboard.readText()
-    if (text && (text.startsWith('http') || text.startsWith('magnet:') || text.startsWith('ftp://') || text.startsWith('ed2k://') || text.startsWith('thunder://'))) {
+    if (text && isDownloadLink(text)) {
       url.value = text
+      fileName.value = extractFileName(text)
     }
   } catch {
     // clipboard read may fail
   }
 })
 
+// 支持的下载协议
+const DOWNLOAD_PROTOCOLS = ['http://', 'https://', 'magnet:', 'ftp://', 'ed2k://', 'thunder://']
+
+function isDownloadLink(link: string): boolean {
+  return DOWNLOAD_PROTOCOLS.some(p => link.startsWith(p))
+}
+
 function extractFileName(link: string): string {
+  // ed2k 链接
+  if (link.startsWith('ed2k://')) {
+    const match = link.match(/\|([^|]+)\|(\d+)\|/)
+    if (match) {
+      return decodeURIComponent(match[1])
+    }
+    return 'ed2k_download'
+  }
+
+  // magnet 链接
+  if (link.startsWith('magnet:')) {
+    const match = link.match(/dn=([^&]+)/)
+    return match ? decodeURIComponent(match[1]) : 'magnet_download'
+  }
+
+  // http/https/ftp
   try {
     const urlObj = new URL(link)
     const pathname = urlObj.pathname
     const name = pathname.substring(pathname.lastIndexOf('/') + 1)
     return decodeURIComponent(name) || 'download'
   } catch {
-    // magnet links or other protocols
-    if (link.startsWith('magnet:')) {
-      const match = link.match(/dn=([^&]+)/)
-      return match ? decodeURIComponent(match[1]) : 'magnet_download'
-    }
     return 'download'
   }
 }
 
 function onUrlChange() {
   fileName.value = extractFileName(url.value)
+}
+
+// 选择下载目录
+async function selectFolder() {
+  try {
+    const folder = await Dialogs.OpenFile({
+      CanChooseDirectories: true,
+      CanChooseFiles: false,
+      CanCreateDirectories: true,
+      Title: '选择下载目录',
+    })
+    if (folder) {
+      savePath.value = folder as string
+    }
+  } catch (e) {
+    console.error('选择目录失败:', e)
+  }
 }
 
 async function handleOk() {
@@ -75,7 +125,7 @@ function handleCancel() {
 
 function resetForm() {
   url.value = ''
-  savePath.value = ''
+  savePath.value = './download'
   fileName.value = ''
 }
 </script>
@@ -103,7 +153,7 @@ function resetForm() {
             <n-icon :component="FolderOpenOutline" />
           </template>
           <template #suffix>
-            <n-button size="tiny" :disabled="loading">浏览</n-button>
+            <n-button size="tiny" :disabled="loading" @click="selectFolder">浏览</n-button>
           </template>
         </n-input>
       </div>
@@ -121,7 +171,7 @@ function resetForm() {
 
     <template #footer>
       <div class="dialog-footer">
-        <n-button @click="handleCancel" :disabled="loading">取消</n-button>
+        <n-button @click="handleCancel">取消</n-button>
         <n-button type="primary" @click="handleOk" :loading="loading" :disabled="!url.trim()">立即下载</n-button>
       </div>
     </template>

@@ -4,16 +4,8 @@ import { lightTheme } from 'naive-ui'
 <template>
   <n-config-provider :theme="lightTheme">
     <n-global-style />
-      <n-space vertical size="large">
-        <n-layout>
-          <RouterView />
-        </n-layout>
-      </n-space>
+    <n-message-provider>
+      <RouterView />
+    </n-message-provider>
   </n-config-provider>
 </template>
-<style lang="scss" scoped>
-.n-space{
-  width: 100%;
-  height: 100%;
-}
-</style>

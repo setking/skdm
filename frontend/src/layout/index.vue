@@ -31,18 +31,24 @@ import AppMain from "./main/index.vue"
 <style scoped lang="scss">
 .layout {
   width: 100vw;
+  height: 100vh;
   display: grid;
-  grid-template-rows: auto 1fr auto;   /* header / content / footer */
-  min-height: 100vh;
+  grid-template-rows: auto 1fr;   /* header / content */
+  overflow: hidden;
 }
 .content {
+  overflow: hidden;
   .container {
     height: 100%;
     display: flex;
     justify-content: flex-start;
     .side-bar{
       border-right: 1px solid #ddd;
-      height: 100%;
+    }
+    .main {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
     }
   }
 }

@@ -4,10 +4,11 @@ import (
 	"embed"
 	_ "embed"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"changeme/backed/api/apiserver"
-	"changeme/backed/api/aria2server"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -36,12 +37,14 @@ func main() {
 	// 'Assets' configures the asset server with the 'FS' variable pointing to the frontend files.
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
+	cacheDir, _ := os.UserCacheDir()
+	dbPath := filepath.Join(cacheDir, "skdm", "skdm.db")
+
 	app := application.New(application.Options{
 		Name:        "skdm",
 		Description: "skdm下载器",
 		Services: []application.Service{
-			application.NewService(aria2server.NewAria2Service()),
-			application.NewService(&apiserver.GreetService{}),
+			application.NewService(apiserver.NewAria2Service(dbPath)),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -57,7 +60,11 @@ func main() {
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:     "Window 1",
+		Title:     "skdm",
+		Width:     1024,
+		Height:    680,
+		MinWidth:  800,
+		MinHeight: 500,
 		Frameless: true,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,

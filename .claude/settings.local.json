@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/go/pkg/mod/github.com/wailsapp/wails/**)",
+      "Bash(go build:*)",
+      "Read(//d/go/pkg/mod/github.com/siku2/arigo@v0.3.0/**)"
+    ]
+  }
+}

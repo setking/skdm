@@ -7,7 +7,7 @@ import type {MenuOption} from 'naive-ui'
 import type {Component} from 'vue'
 import { ref } from 'vue'
 import {
-  AlbumsSharp as AlbumsIcon,
+  AlertCircleSharp as AlertCircleIcon,
   SettingsSharp as SettingsIcon,
   TrashSharp as TrashIcon,
   CaretForwardSharp as CaretForwardIcon,
@@ -16,7 +16,7 @@ import {
 import {NIcon} from 'naive-ui'
 import {h} from 'vue'
 import {RouterLink} from 'vue-router'
-const allTask = ref('all-task')
+const allTask = ref('unfinished-task')
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, {default: () => h(icon)})
 }
@@ -33,20 +33,6 @@ const menuOptions: MenuOption[] = [
         RouterLink,
         {
           to: {
-            name: 'all',
-          }
-        },
-        {default: () => '全部'}
-      ),
-    key: 'all-task',
-    icon: renderIcon(AlbumsIcon)
-  },
-  {
-    label: () =>
-      h(
-        RouterLink,
-        {
-          to: {
             name: 'run',
           }
         },
@@ -54,6 +40,20 @@ const menuOptions: MenuOption[] = [
       ),
     key: 'run-task',
     icon: renderIcon(CaretForwardIcon)
+  },
+  {
+    label: () =>
+      h(
+        RouterLink,
+        {
+          to: {
+            name: 'unfinished',
+          }
+        },
+        {default: () => '未完成'}
+      ),
+    key: 'unfinished-task',
+    icon: renderIcon(AlertCircleIcon)
   },
   {
     label: () =>

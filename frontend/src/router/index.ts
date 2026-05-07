@@ -35,14 +35,14 @@ const router = createRouter({
     {
       path: "/",
       component: Layout,
-      redirect: "/all",
+      redirect: "/unfinished",
       children: [
         {
-          path: "all",
+          path: "unfinished",
           component: () => import("@/views/alltask/index.vue"),
-          name: "all",
+          name: "unfinished",
           meta: {
-            title: "所有任务",
+            title: "未完成",
           }
         }
       ]

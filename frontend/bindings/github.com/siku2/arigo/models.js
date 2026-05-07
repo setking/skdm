@@ -7,6 +7,511 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * BitTorrentStatus holds information for a BitTorrent download
+ */
+export class BitTorrentStatus {
+    /**
+     * Creates a new BitTorrentStatus instance.
+     * @param {Partial<BitTorrentStatus>} [$$source = {}] - The source object to create the BitTorrentStatus.
+     */
+    constructor($$source = {}) {
+        if (!("announceList" in $$source)) {
+            /**
+             * List of lists of announce URIs.
+             * If the torrent contains announce and no announce-list,
+             * announce is converted to the announce-list format
+             * List of lists of announce URIs.
+             * @member
+             * @type {string[][]}
+             */
+            this["announceList"] = [];
+        }
+        if (!("comment" in $$source)) {
+            /**
+             * The comment of the torrent
+             * @member
+             * @type {string}
+             */
+            this["comment"] = "";
+        }
+        if (!("creationDate" in $$source)) {
+            /**
+             * The creation time of the torrent
+             * @member
+             * @type {UNIXTime}
+             */
+            this["creationDate"] = null;
+        }
+        if (!("mode" in $$source)) {
+            /**
+             * File mode of the torrent
+             * @member
+             * @type {TorrentMode}
+             */
+            this["mode"] = TorrentMode.$zero;
+        }
+        if (!("info" in $$source)) {
+            /**
+             * Information from the info dictionary
+             * @member
+             * @type {BitTorrentStatusInfo}
+             */
+            this["info"] = (new BitTorrentStatusInfo());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new BitTorrentStatus instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {BitTorrentStatus}
+     */
+    static createFrom($$source = {}) {
+        const $$createField0_0 = $$createType1;
+        const $$createField4_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("announceList" in $$parsedSource) {
+            $$parsedSource["announceList"] = $$createField0_0($$parsedSource["announceList"]);
+        }
+        if ("info" in $$parsedSource) {
+            $$parsedSource["info"] = $$createField4_0($$parsedSource["info"]);
+        }
+        return new BitTorrentStatus(/** @type {Partial<BitTorrentStatus>} */($$parsedSource));
+    }
+}
+
+/**
+ * A BitTorrentStatusInfo holds information from the info dictionary.
+ */
+export class BitTorrentStatusInfo {
+    /**
+     * Creates a new BitTorrentStatusInfo instance.
+     * @param {Partial<BitTorrentStatusInfo>} [$$source = {}] - The source object to create the BitTorrentStatusInfo.
+     */
+    constructor($$source = {}) {
+        if (!("name" in $$source)) {
+            /**
+             * name in info dictionary
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new BitTorrentStatusInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {BitTorrentStatusInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new BitTorrentStatusInfo(/** @type {Partial<BitTorrentStatusInfo>} */($$parsedSource));
+    }
+}
+
+/**
+ * DownloadStatus represents the status of a download.
+ * @readonly
+ * @enum {string}
+ */
+export const DownloadStatus = {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero: "",
+
+    /**
+     * StatusActive represents currently downloading/seeding downloads
+     */
+    StatusActive: "active",
+
+    /**
+     * StatusWaiting represents downloads in the queue
+     */
+    StatusWaiting: "waiting",
+
+    /**
+     * StatusPaused represents paused downloads
+     */
+    StatusPaused: "paused",
+
+    /**
+     * StatusError represents downloads that were stopped because of error
+     */
+    StatusError: "error",
+
+    /**
+     * StatusCompleted represents stopped and completed downloads
+     */
+    StatusCompleted: "complete",
+
+    /**
+     * StatusRemoved represents the downloads removed by user
+     */
+    StatusRemoved: "removed",
+};
+
+/**
+ * EventListener represents a function which should be called
+ * when an event occurs.
+ * @typedef {any} EventListener
+ */
+
+/**
+ * EventType represents a DownloadEvent which can be subscribed to on the
+ * Client.
+ * @readonly
+ * @enum {number}
+ */
+export const EventType = {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero: 0,
+
+    /**
+     * StartEvent is dispatched when a download is started
+     */
+    StartEvent: 0,
+
+    /**
+     * PauseEvent is dispatched when a download is paused
+     */
+    PauseEvent: 1,
+
+    /**
+     * StopEvent is dispatched when a download is stopped
+     */
+    StopEvent: 2,
+
+    /**
+     * CompleteEvent is dispatched when a download is completed
+     */
+    CompleteEvent: 3,
+
+    /**
+     * BTCompleteEvent is dispatched when a BitTorrent download is completed
+     */
+    BTCompleteEvent: 4,
+
+    /**
+     * ErrorEvent is dispatched when an error occurs
+     */
+    ErrorEvent: 5,
+};
+
+/**
+ * ExitStatus is an integer returned by aria2 for downloads which describes why a download exited.
+ * Please see https://aria2.github.io/manual/en/html/aria2c.html#exit-status
+ * @readonly
+ * @enum {number}
+ */
+export const ExitStatus = {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero: 0,
+
+    /**
+     * Success indicates that all downloads were successful.
+     */
+    Success: 0,
+
+    /**
+     * UnknownError indicates that an unknown error occurred.
+     */
+    UnknownError: 1,
+
+    /**
+     * Timeout indicates that a timeout occurred.
+     */
+    Timeout: 2,
+
+    /**
+     * ResourceNotFound indicates that a resource was not found.
+     */
+    ResourceNotFound: 3,
+
+    /**
+     * ResourceNotFoundReached indicates that aria2 saw the specified number of “resource not found” error.
+     * See the --max-file-not-found option.
+     */
+    ResourceNotFoundReached: 4,
+
+    /**
+     * DownloadSpeedTooSlow indicates that a download aborted because download speed was too slow.
+     * See --lowest-speed-limit option.
+     */
+    DownloadSpeedTooSlow: 5,
+
+    /**
+     * NetworkError indicates that a network problem occurred.
+     */
+    NetworkError: 6,
+
+    /**
+     * UnfinishedDownloads indicates that there were unfinished downloads.
+     * This error is only reported if all finished downloads were successful and there were unfinished
+     * downloads in a queue when aria2 exited by pressing Ctrl-C by an user or sending TERM or INT signal.
+     */
+    UnfinishedDownloads: 7,
+
+    /**
+     * RemoteNoResume indicates that the remote server did not support resume when resume was required to complete download.
+     */
+    RemoteNoResume: 8,
+
+    /**
+     * NotEnoughDiskSpace indicates that there was not enough disk space available.
+     */
+    NotEnoughDiskSpace: 9,
+
+    /**
+     * PieceLengthMismatch indicates that the piece length was different from one in .aria2 control file.
+     * See --allow-piece-length-change option.
+     */
+    PieceLengthMismatch: 10,
+
+    /**
+     * SameFileBeingDownloaded indicates that aria2 was downloading same file at that moment.
+     */
+    SameFileBeingDownloaded: 11,
+
+    /**
+     * SameInfoHashBeingDownloaded indicates that aria2 was downloading same info hash torrent at that moment.
+     */
+    SameInfoHashBeingDownloaded: 12,
+
+    /**
+     * FileAlreadyExists indicates that the file already existed. See --allow-overwrite option.
+     */
+    FileAlreadyExists: 13,
+
+    /**
+     * RenamingFailed indicates that renaming the file failed. See --auto-file-renaming option.
+     */
+    RenamingFailed: 14,
+
+    /**
+     * CouldNotOpenExistingFile indicates that aria2 could not open existing file.
+     */
+    CouldNotOpenExistingFile: 15,
+
+    /**
+     * CouldNotCreateNewFile indicates that aria2 could not create new file or truncate existing file.
+     */
+    CouldNotCreateNewFile: 16,
+
+    /**
+     * FileIOError indicates that a file I/O error occurred.
+     */
+    FileIOError: 17,
+
+    /**
+     * CouldNotCreateDirectory indicates that aria2 could not create directory.
+     */
+    CouldNotCreateDirectory: 18,
+
+    /**
+     * NameResolutionFailed indicates that the name resolution failed.
+     */
+    NameResolutionFailed: 19,
+
+    /**
+     * MetalinkParsingFailed indicates that aria2 could not parse Metalink document.
+     */
+    MetalinkParsingFailed: 20,
+
+    /**
+     * FTPCommandFailed indicates that the FTP command failed.
+     */
+    FTPCommandFailed: 21,
+
+    /**
+     * HTTPResponseHeaderBad indicates that the HTTP response header was bad or unexpected.
+     */
+    HTTPResponseHeaderBad: 22,
+
+    /**
+     * TooManyRedirects indicates that too many redirects occurred.
+     */
+    TooManyRedirects: 23,
+
+    /**
+     * HTTPAuthorizationFailed indicates that HTTP authorization failed.
+     */
+    HTTPAuthorizationFailed: 24,
+
+    /**
+     * BencodedFileParseError indicates that aria2 could not parse bencoded file (usually “.torrent” file).
+     */
+    BencodedFileParseError: 25,
+
+    /**
+     * TorrentFileCorrupt indicates that the “.torrent” file was corrupted or missing information that aria2 needed.
+     */
+    TorrentFileCorrupt: 26,
+
+    /**
+     * MagnetURIBad indicates that the magnet URI was bad.
+     */
+    MagnetURIBad: 27,
+
+    /**
+     * RemoteServerHandleRequestError indicates that the remote server was unable to handle the request due to a
+     * temporary overloading or maintenance.
+     */
+    RemoteServerHandleRequestError: 28,
+
+    /**
+     * JSONRPCParseError indicates that aria2 could not parse JSON-RPC request.
+     */
+    JSONRPCParseError: 29,
+
+    /**
+     * Reserved is a reserved value. If you get this exit status then the library is probably out-of-date,
+     * or the universe is breaking down.
+     */
+    Reserved: 30,
+
+    /**
+     * ChecksumValidationFailed indicates that the checksum validation failed.
+     */
+    ChecksumValidationFailed: 31,
+};
+
+/**
+ * File represents a single file downloaded by aria2.
+ * It is returned by the GetFiles() method.
+ */
+export class File {
+    /**
+     * Creates a new File instance.
+     * @param {Partial<File>} [$$source = {}] - The source object to create the File.
+     */
+    constructor($$source = {}) {
+        if (!("index" in $$source)) {
+            /**
+             * Index of the file, starting at 1, in the same order as files appear in the multi-file torrent.
+             * @member
+             * @type {`${number}`}
+             */
+            this["index"] = "0";
+        }
+        if (!("path" in $$source)) {
+            /**
+             * File path
+             * @member
+             * @type {string}
+             */
+            this["path"] = "";
+        }
+        if (!("length" in $$source)) {
+            /**
+             * File size in bytes
+             * @member
+             * @type {`${number}`}
+             */
+            this["length"] = "0";
+        }
+        if (!("completedLength" in $$source)) {
+            /**
+             * Completed length of this file in bytes.
+             * Please note that it is possible that sum of completedLength is less than the completedLength returned
+             * by the TellStatus() method. This is because completedLength in GetFiles() only includes completed pieces.
+             * On the other hand, completedLength in TellStatus() also includes partially completed pieces.
+             * @member
+             * @type {`${number}`}
+             */
+            this["completedLength"] = "0";
+        }
+        if (!("selected" in $$source)) {
+            /**
+             * true if this file is selected by the SelectFile option.
+             * If SelectFile is not specified or this is single-file torrent or not a torrent download at all,
+             * this value is always true. Otherwise false.
+             * @member
+             * @type {`${boolean}`}
+             */
+            this["selected"] = "false";
+        }
+        if (!("uris" in $$source)) {
+            /**
+             * Array of URIs for this file.
+             * @member
+             * @type {URI[]}
+             */
+            this["uris"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new File instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {File}
+     */
+    static createFrom($$source = {}) {
+        const $$createField5_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("uris" in $$parsedSource) {
+            $$parsedSource["uris"] = $$createField5_0($$parsedSource["uris"]);
+        }
+        return new File(/** @type {Partial<File>} */($$parsedSource));
+    }
+}
+
+/**
+ * FileServers holds the servers of a file
+ */
+export class FileServers {
+    /**
+     * Creates a new FileServers instance.
+     * @param {Partial<FileServers>} [$$source = {}] - The source object to create the FileServers.
+     */
+    constructor($$source = {}) {
+        if (!("index" in $$source)) {
+            /**
+             * Index of the file, starting at 1,
+             * in the same order as files appear in the multi-file metalink.
+             * @member
+             * @type {`${number}`}
+             */
+            this["index"] = "0";
+        }
+        if (!("servers" in $$source)) {
+            /**
+             * Slice of Servers which are used for the file
+             * @member
+             * @type {Server[]}
+             */
+            this["servers"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FileServers instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {FileServers}
+     */
+    static createFrom($$source = {}) {
+        const $$createField1_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("servers" in $$parsedSource) {
+            $$parsedSource["servers"] = $$createField1_0($$parsedSource["servers"]);
+        }
+        return new FileServers(/** @type {Partial<FileServers>} */($$parsedSource));
+    }
+}
+
+/**
  * GID provides an object oriented approach to arigo.
  * Instead of calling the methods on the client directly,
  * you can call them on the GID instance.
@@ -37,6 +542,97 @@ export class GID {
     static createFrom($$source = {}) {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new GID(/** @type {Partial<GID>} */($$parsedSource));
+    }
+}
+
+/**
+ * MethodCall represents a method call in a multi call operation
+ */
+export class MethodCall {
+    /**
+     * Creates a new MethodCall instance.
+     * @param {Partial<MethodCall>} [$$source = {}] - The source object to create the MethodCall.
+     */
+    constructor($$source = {}) {
+        if (!("methodName" in $$source)) {
+            /**
+             * Method name to call
+             * @member
+             * @type {string}
+             */
+            this["methodName"] = "";
+        }
+        if (!("params" in $$source)) {
+            /**
+             * Parameters to pass to the method
+             * @member
+             * @type {any[]}
+             */
+            this["params"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MethodCall instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {MethodCall}
+     */
+    static createFrom($$source = {}) {
+        const $$createField1_0 = $$createType7;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("params" in $$parsedSource) {
+            $$parsedSource["params"] = $$createField1_0($$parsedSource["params"]);
+        }
+        return new MethodCall(/** @type {Partial<MethodCall>} */($$parsedSource));
+    }
+}
+
+/**
+ * MethodResult represents the result of a MethodCall
+ * in a MultiCall operation.
+ */
+export class MethodResult {
+    /**
+     * Creates a new MethodResult instance.
+     * @param {Partial<MethodResult>} [$$source = {}] - The source object to create the MethodResult.
+     */
+    constructor($$source = {}) {
+        if (!("Result" in $$source)) {
+            /**
+             * Raw JSON value returned
+             * @member
+             * @type {string}
+             */
+            this["Result"] = "";
+        }
+        if (!("Error" in $$source)) {
+            /**
+             * Error encountered during the method call.
+             * This is likely to be a MethodCallError but it's
+             * not guaranteed.
+             * @member
+             * @type {any}
+             */
+            this["Error"] = null;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MethodResult instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {MethodResult}
+     */
+    static createFrom($$source = {}) {
+        const $$createField0_0 = $Create.ByteSlice;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("Result" in $$parsedSource) {
+            $$parsedSource["Result"] = $$createField0_0($$parsedSource["Result"]);
+        }
+        return new MethodResult(/** @type {Partial<MethodResult>} */($$parsedSource));
     }
 }
 
@@ -840,3 +1436,676 @@ export class Options {
         return new Options(/** @type {Partial<Options>} */($$parsedSource));
     }
 }
+
+/**
+ * Peer represents a torrent peer
+ */
+export class Peer {
+    /**
+     * Creates a new Peer instance.
+     * @param {Partial<Peer>} [$$source = {}] - The source object to create the Peer.
+     */
+    constructor($$source = {}) {
+        if (!("peerId" in $$source)) {
+            /**
+             * Percent-encoded peer ID.
+             * @member
+             * @type {string}
+             */
+            this["peerId"] = "";
+        }
+        if (!("ip" in $$source)) {
+            /**
+             * IP address of the peer.
+             * @member
+             * @type {string}
+             */
+            this["ip"] = "";
+        }
+        if (!("port" in $$source)) {
+            /**
+             * Port number of the peer
+             * @member
+             * @type {`${number}`}
+             */
+            this["port"] = "0";
+        }
+        if (!("bitfield" in $$source)) {
+            /**
+             * Hexadecimal representation of the download progress of the peer.
+             * The highest bit corresponds to the piece at index 0.
+             * Set bits indicate the piece is available and unset bits indicate the piece is missing.
+             * Any spare bits at the end are set to zero.
+             * @member
+             * @type {string}
+             */
+            this["bitfield"] = "";
+        }
+        if (!("amChoking" in $$source)) {
+            /**
+             * true if aria2 is choking the peer. Otherwise false.
+             * @member
+             * @type {`${boolean}`}
+             */
+            this["amChoking"] = "false";
+        }
+        if (!("peerChoking" in $$source)) {
+            /**
+             * true if the peer is choking aria2. Otherwise false.
+             * @member
+             * @type {`${boolean}`}
+             */
+            this["peerChoking"] = "false";
+        }
+        if (!("downloadSpeed" in $$source)) {
+            /**
+             * Download speed (byte/sec) that this client obtains from the peer
+             * @member
+             * @type {`${number}`}
+             */
+            this["downloadSpeed"] = "0";
+        }
+        if (!("uploadSpeed" in $$source)) {
+            /**
+             * Upload speed (byte/sec) that this client uploads to the peer
+             * @member
+             * @type {`${number}`}
+             */
+            this["uploadSpeed"] = "0";
+        }
+        if (!("seeder" in $$source)) {
+            /**
+             * true if this peer is a seeder. Otherwise false
+             * @member
+             * @type {`${boolean}`}
+             */
+            this["seeder"] = "false";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Peer instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Peer}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Peer(/** @type {Partial<Peer>} */($$parsedSource));
+    }
+}
+
+/**
+ * PositionSetBehaviour determines how a position is to be interpreted
+ * @readonly
+ * @enum {string}
+ */
+export const PositionSetBehaviour = {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero: "",
+
+    /**
+     * SetPositionStart sets the position relative to the start
+     */
+    SetPositionStart: "POS_SET",
+
+    /**
+     * SetPositionEnd sets the position relative to the end
+     */
+    SetPositionEnd: "POS_END",
+
+    /**
+     * SetPositionRelative sets the position relative to the current position
+     */
+    SetPositionRelative: "POS_CUR",
+};
+
+/**
+ * Server represents an endpoint which data is being downloaded from
+ */
+export class Server {
+    /**
+     * Creates a new Server instance.
+     * @param {Partial<Server>} [$$source = {}] - The source object to create the Server.
+     */
+    constructor($$source = {}) {
+        if (!("uri" in $$source)) {
+            /**
+             * Original URI.
+             * @member
+             * @type {string}
+             */
+            this["uri"] = "";
+        }
+        if (!("currentUri" in $$source)) {
+            /**
+             * This is the URI currently used for downloading.
+             * If redirection is involved, currentUri and uri may differ.
+             * @member
+             * @type {string}
+             */
+            this["currentUri"] = "";
+        }
+        if (!("downloadSpeed" in $$source)) {
+            /**
+             * Download speed (byte/sec)
+             * @member
+             * @type {`${number}`}
+             */
+            this["downloadSpeed"] = "0";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Server instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Server}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Server(/** @type {Partial<Server>} */($$parsedSource));
+    }
+}
+
+/**
+ * SessionInfo holds the session information of aria2
+ */
+export class SessionInfo {
+    /**
+     * Creates a new SessionInfo instance.
+     * @param {Partial<SessionInfo>} [$$source = {}] - The source object to create the SessionInfo.
+     */
+    constructor($$source = {}) {
+        if (!("sessionId" in $$source)) {
+            /**
+             * Session ID, which is generated each time when aria2 is invoked
+             * @member
+             * @type {string}
+             */
+            this["sessionId"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SessionInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {SessionInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SessionInfo(/** @type {Partial<SessionInfo>} */($$parsedSource));
+    }
+}
+
+/**
+ * Stats holds aria2 statistics
+ */
+export class Stats {
+    /**
+     * Creates a new Stats instance.
+     * @param {Partial<Stats>} [$$source = {}] - The source object to create the Stats.
+     */
+    constructor($$source = {}) {
+        if (!("downloadSpeed" in $$source)) {
+            /**
+             * Overall download speed (byte/sec).
+             * @member
+             * @type {`${number}`}
+             */
+            this["downloadSpeed"] = "0";
+        }
+        if (!("uploadSpeed" in $$source)) {
+            /**
+             * Overall upload speed(byte/sec).
+             * @member
+             * @type {`${number}`}
+             */
+            this["uploadSpeed"] = "0";
+        }
+        if (!("numActive" in $$source)) {
+            /**
+             * The number of active downloads.
+             * @member
+             * @type {`${number}`}
+             */
+            this["numActive"] = "0";
+        }
+        if (!("numWaiting" in $$source)) {
+            /**
+             * The number of waiting downloads.
+             * @member
+             * @type {`${number}`}
+             */
+            this["numWaiting"] = "0";
+        }
+        if (!("numStopped" in $$source)) {
+            /**
+             * The number of stopped downloads in the current session.
+             * This value is capped by the MaxDownloadResult option.
+             * @member
+             * @type {`${number}`}
+             */
+            this["numStopped"] = "0";
+        }
+        if (!("numStoppedTotal" in $$source)) {
+            /**
+             * The number of stopped downloads in the current session and not capped by the MaxDownloadResult option.
+             * @member
+             * @type {`${number}`}
+             */
+            this["numStoppedTotal"] = "0";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Stats instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Stats}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Stats(/** @type {Partial<Stats>} */($$parsedSource));
+    }
+}
+
+/**
+ * Status holds information for a download.
+ */
+export class Status {
+    /**
+     * Creates a new Status instance.
+     * @param {Partial<Status>} [$$source = {}] - The source object to create the Status.
+     */
+    constructor($$source = {}) {
+        if (!("gid" in $$source)) {
+            /**
+             * gid of the download
+             * @member
+             * @type {string}
+             */
+            this["gid"] = "";
+        }
+        if (!("status" in $$source)) {
+            /**
+             * Download status
+             * @member
+             * @type {DownloadStatus}
+             */
+            this["status"] = DownloadStatus.$zero;
+        }
+        if (!("totalLength" in $$source)) {
+            /**
+             * Total length of the download in bytes
+             * @member
+             * @type {`${number}`}
+             */
+            this["totalLength"] = "0";
+        }
+        if (!("completedLength" in $$source)) {
+            /**
+             * Completed length of the download in bytes
+             * @member
+             * @type {`${number}`}
+             */
+            this["completedLength"] = "0";
+        }
+        if (!("uploadLength" in $$source)) {
+            /**
+             * Uploaded length of the download in bytes
+             * @member
+             * @type {`${number}`}
+             */
+            this["uploadLength"] = "0";
+        }
+        if (!("bitfield" in $$source)) {
+            /**
+             * Hexadecimal representation of the download progress.
+             * The highest bit corresponds to the piece at index 0. Any set bits indicate loaded pieces,
+             * while unset bits indicate not yet loaded and/or missing pieces.
+             * Any overflow bits at the end are set to zero.
+             * When the download was not started yet, this will be an empty string.
+             * @member
+             * @type {string}
+             */
+            this["bitfield"] = "";
+        }
+        if (!("downloadSpeed" in $$source)) {
+            /**
+             * Download speed of this download measured in bytes/sec
+             * @member
+             * @type {`${number}`}
+             */
+            this["downloadSpeed"] = "0";
+        }
+        if (!("uploadSpeed" in $$source)) {
+            /**
+             * Upload speed of this download measured in bytes/sec
+             * @member
+             * @type {`${number}`}
+             */
+            this["uploadSpeed"] = "0";
+        }
+        if (!("infoHash" in $$source)) {
+            /**
+             * InfoHash. BitTorrent only
+             * @member
+             * @type {string}
+             */
+            this["infoHash"] = "";
+        }
+        if (!("numSeeders" in $$source)) {
+            /**
+             * The number of seeders aria2 has connected to. BitTorrent only
+             * @member
+             * @type {`${number}`}
+             */
+            this["numSeeders"] = "0";
+        }
+        if (!("seeder" in $$source)) {
+            /**
+             * true if the local endpoint is a seeder. Otherwise false. BitTorrent only
+             * @member
+             * @type {`${boolean}`}
+             */
+            this["seeder"] = "false";
+        }
+        if (!("pieceLength" in $$source)) {
+            /**
+             * Piece length in bytes
+             * @member
+             * @type {`${number}`}
+             */
+            this["pieceLength"] = "0";
+        }
+        if (!("numPieces" in $$source)) {
+            /**
+             * The number of pieces
+             * @member
+             * @type {`${number}`}
+             */
+            this["numPieces"] = "0";
+        }
+        if (!("connections" in $$source)) {
+            /**
+             * The number of peers/servers aria2 has connected to
+             * @member
+             * @type {`${number}`}
+             */
+            this["connections"] = "0";
+        }
+        if (!("errorCode" in $$source)) {
+            /**
+             * The code of the last error for this item, if any.
+             * @member
+             * @type {`${number}`}
+             */
+            this["errorCode"] = "0";
+        }
+        if (!("errorMessage" in $$source)) {
+            /**
+             * The human readable error message associated to ErrorCode
+             * @member
+             * @type {string}
+             */
+            this["errorMessage"] = "";
+        }
+        if (!("followedBy" in $$source)) {
+            /**
+             * List of GIDs which are generated as the result of this download.
+             * For example, when aria2 downloads a Metalink file, it generates downloads described in the Metalink
+             * (see the --follow-metalink option). This value is useful to track auto-generated downloads.
+             * If there are no such downloads, this will be an empty slice
+             * @member
+             * @type {string[]}
+             */
+            this["followedBy"] = [];
+        }
+        if (!("following" in $$source)) {
+            /**
+             * The reverse link for followedBy.
+             * A download included in followedBy has this object’s GID in its following
+             * value.
+             * @member
+             * @type {string}
+             */
+            this["following"] = "";
+        }
+        if (!("belongsTo" in $$source)) {
+            /**
+             * GID of a parent download. Some downloads are a part of another download.
+             * For example, if a file in a Metalink has BitTorrent resources,
+             * the downloads of “.torrent” files are parts of that parent.
+             * If this download has no parent, this will be an empty string
+             * @member
+             * @type {string}
+             */
+            this["belongsTo"] = "";
+        }
+        if (!("dir" in $$source)) {
+            /**
+             * Directory to save files
+             * @member
+             * @type {string}
+             */
+            this["dir"] = "";
+        }
+        if (!("files" in $$source)) {
+            /**
+             * Slice of files.
+             * @member
+             * @type {File[]}
+             */
+            this["files"] = [];
+        }
+        if (!("bittorrent" in $$source)) {
+            /**
+             * Information retrieved from the .torrent (file). BitTorrent only
+             * @member
+             * @type {BitTorrentStatus}
+             */
+            this["bittorrent"] = (new BitTorrentStatus());
+        }
+        if (!("verifiedLength" in $$source)) {
+            /**
+             * The number of verified number of bytes while the files are being has
+             * checked.
+             * This key exists only when this download is being hash checked
+             * @member
+             * @type {`${number}`}
+             */
+            this["verifiedLength"] = "0";
+        }
+        if (!("verifyIntegrityPending" in $$source)) {
+            /**
+             * true if this download is waiting for the hash check in a queue.
+             * @member
+             * @type {`${boolean}`}
+             */
+            this["verifyIntegrityPending"] = "false";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Status instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Status}
+     */
+    static createFrom($$source = {}) {
+        const $$createField16_0 = $$createType0;
+        const $$createField20_0 = $$createType9;
+        const $$createField21_0 = $$createType10;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("followedBy" in $$parsedSource) {
+            $$parsedSource["followedBy"] = $$createField16_0($$parsedSource["followedBy"]);
+        }
+        if ("files" in $$parsedSource) {
+            $$parsedSource["files"] = $$createField20_0($$parsedSource["files"]);
+        }
+        if ("bittorrent" in $$parsedSource) {
+            $$parsedSource["bittorrent"] = $$createField21_0($$parsedSource["bittorrent"]);
+        }
+        return new Status(/** @type {Partial<Status>} */($$parsedSource));
+    }
+}
+
+/**
+ * TorrentMode represents the file mode of the torrent
+ * @readonly
+ * @enum {string}
+ */
+export const TorrentMode = {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero: "",
+
+    /**
+     * TorrentModeSingle represents the file mode single
+     */
+    TorrentModeSingle: "single",
+
+    /**
+     * TorrentModeMulti represents the file mode multi
+     */
+    TorrentModeMulti: "multi",
+};
+
+/**
+ * UNIXTime is a wrapper around time.Time that marshals to a unix timestamp.
+ * @typedef {any} UNIXTime
+ */
+
+/**
+ * URI represents a uri used in a download
+ */
+export class URI {
+    /**
+     * Creates a new URI instance.
+     * @param {Partial<URI>} [$$source = {}] - The source object to create the URI.
+     */
+    constructor($$source = {}) {
+        if (!("uri" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["uri"] = "";
+        }
+        if (!("status" in $$source)) {
+            /**
+             * Status of the uri
+             * @member
+             * @type {URIStatus}
+             */
+            this["status"] = URIStatus.$zero;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new URI instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {URI}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new URI(/** @type {Partial<URI>} */($$parsedSource));
+    }
+}
+
+/**
+ * URIStatus represents the status of an uri.
+ * @readonly
+ * @enum {string}
+ */
+export const URIStatus = {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero: "",
+
+    /**
+     * URIUsed represents the state of the uri being used
+     */
+    URIUsed: "used",
+
+    /**
+     * URIWaiting represents the state of the uri waiting in the queue
+     */
+    URIWaiting: "waiting",
+};
+
+/**
+ * UnsubscribeFunc is a function which when called, unsubscribes from an
+ * event.
+ * @typedef {any} UnsubscribeFunc
+ */
+
+/**
+ * VersionInfo represents the version information sent by aria2
+ */
+export class VersionInfo {
+    /**
+     * Creates a new VersionInfo instance.
+     * @param {Partial<VersionInfo>} [$$source = {}] - The source object to create the VersionInfo.
+     */
+    constructor($$source = {}) {
+        if (!("version" in $$source)) {
+            /**
+             * Version number of aria2 as a string.
+             * @member
+             * @type {string}
+             */
+            this["version"] = "";
+        }
+        if (!("enabledFeatures" in $$source)) {
+            /**
+             * Slice of enabled features. Each feature is given as a string.
+             * @member
+             * @type {string[]}
+             */
+            this["enabledFeatures"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new VersionInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {VersionInfo}
+     */
+    static createFrom($$source = {}) {
+        const $$createField1_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("enabledFeatures" in $$parsedSource) {
+            $$parsedSource["enabledFeatures"] = $$createField1_0($$parsedSource["enabledFeatures"]);
+        }
+        return new VersionInfo(/** @type {Partial<VersionInfo>} */($$parsedSource));
+    }
+}
+
+// Private type creation functions
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = BitTorrentStatusInfo.createFrom;
+const $$createType3 = URI.createFrom;
+const $$createType4 = $Create.Array($$createType3);
+const $$createType5 = Server.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = $Create.Array($Create.Any);
+const $$createType8 = File.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = BitTorrentStatus.createFrom;
