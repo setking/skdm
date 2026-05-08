@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Window } from '@wailsio/runtime'
 import { lightTheme } from 'naive-ui'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import DownloadDialog from '@/components/download-dialog/index.vue'
 
-const show = ref(true)
+const show = ref(false)
+onMounted(() => { show.value = true })
 
 function onUpdateShow(val: boolean) {
   if (!val) {
