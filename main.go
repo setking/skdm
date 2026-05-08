@@ -59,7 +59,7 @@ func openDownloadPopup(app *application.App) {
 		Title:                     "新建下载任务",
 		Width:                     600,
 		Height:                    450,
-		URL:                       "/tray-task",
+		URL:                       "/#/tray-task",
 		Frameless:                 true,
 		DisableResize:             true,
 		BackgroundColour:          application.NewRGB(27, 38, 54),
@@ -114,8 +114,9 @@ func main() {
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
-		BackgroundColour: application.NewRGB(27, 38, 54),
-		URL:              "/",
+		BackgroundColour:          application.NewRGB(27, 38, 54),
+		DefaultContextMenuDisabled: true,
+		URL:                       "/",
 	})
 
 	// Intercept window close to hide instead of destroy.
