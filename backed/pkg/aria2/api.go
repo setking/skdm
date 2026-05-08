@@ -221,6 +221,8 @@ func (a *Aria2Service) Remove(gid string) error {
 		if a.db != nil {
 			a.db.UpdateDownloadStatus(gid, "removed", 0, 0, 0, 0, "")
 		}
+		// syncOneDownloadStatus 已推送更新；若未覆盖到则额外推送
+		a.fetchAndPush(gid)
 		return nil
 	}
 	return err
@@ -238,6 +240,7 @@ func (a *Aria2Service) ForceRemove(gid string) error {
 		if a.db != nil {
 			a.db.UpdateDownloadStatus(gid, "removed", 0, 0, 0, 0, "")
 		}
+		a.fetchAndPush(gid)
 		return nil
 	}
 	return err
@@ -251,11 +254,8 @@ func (a *Aria2Service) Delete(gid string) error {
 	}
 	err = c.Delete(gid)
 	if err != nil && strings.Contains(err.Error(), "not found") {
-		// GID 在 aria2 中已不存在，直接从 SQLite 删除记录
-		if a.db != nil {
-			a.db.DeleteDownload(gid)
-		}
-		return nil
+		// GID 在 aria2 中已不存在，直接从 SQLite 删除记录并通知前端
+		return a.DeleteDownloadRecord(gid)
 	}
 	return err
 }

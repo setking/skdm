@@ -35,20 +35,34 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.74
 
-      - name: Build
-        run: task windows:build
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
 
-      - name: Upload artifact
+      - name: Update build assets (NSIS metadata)
+        run: wails3 task common:update:build-assets
+
+      - name: Package (build + NSIS installer)
+        run: task windows:package
+
+      - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
           name: skdm
           path: bin/skdm.exe
 
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skdm-installer
+          path: bin/skdm-amd64-installer.exe
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: bin/skdm.exe
+          files: |
+            bin/skdm.exe
+            bin/skdm-amd64-installer.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

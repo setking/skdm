@@ -1,17 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, h, computed } from 'vue'
+import { h, onMounted } from 'vue'
 import { NButton, NTag, NProgress, NSpace, useMessage } from 'naive-ui'
-import { ListDownloads, Remove, DeleteDownloadRecord, ContinueDownload, RemoveDownloadResult } from '@bindings/changeme/backed/api/apiserver/aria2service'
+import { Remove, DeleteDownloadRecord, ContinueDownload, RemoveDownloadResult } from '@bindings/changeme/backed/api/apiserver/aria2service'
 import type { DownloadRecord } from '@bindings/changeme/backed/pkg/store/models'
+import { useDownloadStore } from '@/stores/download'
 
 const message = useMessage()
-const allDownloads = ref<DownloadRecord[]>([])
-const loading = ref(false)
-let timer: ReturnType<typeof setInterval> | null = null
-
-const downloads = computed(() =>
-  allDownloads.value.filter(d => d.status === 'error' || d.status === 'paused')
-)
+const store = useDownloadStore()
 
 const statusMap: Record<string, { label: string; type: 'warning' | 'error' }> = {
   paused: { label: '已暂停', type: 'warning' },
@@ -37,37 +32,21 @@ function progressPercent(row: DownloadRecord): number {
   return Math.round((row.completed_length / row.total_length) * 100)
 }
 
-async function fetchDownloads() {
-  loading.value = true
-  try {
-    const [records] = await ListDownloads('', 0, 1000)
-    allDownloads.value = records || []
-  } catch (e) {
-    console.error('获取下载列表失败:', e)
-  } finally {
-    loading.value = false
-  }
-}
-
 async function handleRemove(gid: string) {
   try { await Remove(gid) } catch (e: any) { message.warning('删除失败: ' + e) }
-  await fetchDownloads()
 }
 async function handleDelete(gid: string) {
   try {
-    // 同时从 aria2 内存和 SQLite 中清除，防止重启后被 re-sync
     await RemoveDownloadResult(gid).catch(() => {})
     await DeleteDownloadRecord(gid)
     message.success('已永久删除')
   } catch (e: any) { message.error('删除失败: ' + e) }
-  await fetchDownloads()
 }
 async function handleContinue(gid: string) {
   try {
     await ContinueDownload(gid)
     message.success('已重新开始下载')
   } catch (e: any) { message.error('继续下载失败: ' + e) }
-  await fetchDownloads()
 }
 
 const columns = [
@@ -117,21 +96,19 @@ const columns = [
 ]
 
 onMounted(() => {
-  fetchDownloads()
-  timer = setInterval(fetchDownloads, 5000)
+  store.init()
 })
-onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
 
 <template>
   <div class="page">
     <div class="page-header">
       <h2 class="page-title">未完成</h2>
-      <span class="count">{{ downloads.length }} 个任务</span>
+      <span class="count">{{ store.unfinishedDownloads.length }} 个任务</span>
     </div>
     <div class="table-area">
-      <n-empty v-if="!loading && downloads.length === 0" description="暂无未完成的任务" style="margin-top: 120px" />
-      <n-data-table v-else :columns="columns" :data="downloads" :loading="loading" :bordered="false" striped size="small"
+      <n-empty v-if="store.unfinishedDownloads.length === 0" description="暂无未完成的任务" style="margin-top: 120px" />
+      <n-data-table v-else :columns="columns" :data="store.unfinishedDownloads" :bordered="false" striped size="small"
         flex-height style="height: 100%" />
     </div>
   </div>

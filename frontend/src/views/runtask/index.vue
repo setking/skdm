@@ -1,17 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, h, computed } from 'vue'
+import { h, onMounted } from 'vue'
 import { NButton, NTag, NProgress, NSpace, useMessage } from 'naive-ui'
-import { ListDownloads, Pause, Unpause, Remove } from '@bindings/changeme/backed/api/apiserver/aria2service'
+import { Pause, Unpause, Remove } from '@bindings/changeme/backed/api/apiserver/aria2service'
 import type { DownloadRecord } from '@bindings/changeme/backed/pkg/store/models'
+import { useDownloadStore } from '@/stores/download'
 
 const message = useMessage()
-const allDownloads = ref<DownloadRecord[]>([])
-const loading = ref(false)
-let timer: ReturnType<typeof setInterval> | null = null
-
-const downloads = computed(() =>
-  allDownloads.value.filter(d => d.status === 'active' || d.status === 'waiting' || d.status === 'paused')
-)
+const store = useDownloadStore()
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 B'
@@ -29,27 +24,14 @@ function progressPercent(row: DownloadRecord): number {
   return Math.round((row.completed_length / row.total_length) * 100)
 }
 
-async function fetchDownloads() {
-  loading.value = true
-  try {
-    const [records] = await ListDownloads('', 0, 1000)
-    allDownloads.value = records || []
-  } catch (e) {
-    console.error('获取下载列表失败:', e)
-  } finally { loading.value = false }
-}
-
 async function handlePause(gid: string) {
   try { await Pause(gid) } catch (e: any) { message.warning('暂停失败: ' + e) }
-  await fetchDownloads()
 }
 async function handleUnpause(gid: string) {
   try { await Unpause(gid) } catch (e: any) { message.warning('恢复失败: ' + e) }
-  await fetchDownloads()
 }
 async function handleRemove(gid: string) {
   try { await Remove(gid) } catch (e: any) { message.warning('删除失败: ' + e) }
-  await fetchDownloads()
 }
 
 const columns = [
@@ -98,21 +80,19 @@ const columns = [
 ]
 
 onMounted(() => {
-  fetchDownloads()
-  timer = setInterval(fetchDownloads, 3000)
+  store.init()
 })
-onUnmounted(() => { if (timer) clearInterval(timer) })
 </script>
 
 <template>
   <div class="page">
     <div class="page-header">
       <h2 class="page-title">正在下载</h2>
-      <span class="count">{{ downloads.length }} 个任务</span>
+      <span class="count">{{ store.runningDownloads.length }} 个任务</span>
     </div>
     <div class="table-area">
-      <n-empty v-if="!loading && downloads.length === 0" description="暂无正在下载的任务" style="margin-top: 120px" />
-      <n-data-table v-else :columns="columns" :data="downloads" :loading="loading" :bordered="false" striped size="small"
+      <n-empty v-if="store.runningDownloads.length === 0" description="暂无正在下载的任务" style="margin-top: 120px" />
+      <n-data-table v-else :columns="columns" :data="store.runningDownloads" :bordered="false" striped size="small"
         flex-height style="height: 100%" />
     </div>
   </div>

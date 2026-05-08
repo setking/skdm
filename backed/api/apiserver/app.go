@@ -253,6 +253,11 @@ func (a *Aria2Service) DeleteDownloadRecord(gid string) error {
 	return a.svc.DeleteDownloadRecord(gid)
 }
 
+// FindDownloadByURL 根据 URL 查找已存在的下载记录（用于重复检测，返回 nil 表示无重复）
+func (a *Aria2Service) FindDownloadByURL(url string) (*store.DownloadRecord, error) {
+	return a.svc.FindDownloadByURL(url)
+}
+
 // GetDefaultDownloadDir 获取上次使用的下载目录（从 SQLite 读取）
 func (a *Aria2Service) GetDefaultDownloadDir() (string, error) {
 	return a.svc.GetDefaultDownloadDir()

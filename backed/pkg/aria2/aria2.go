@@ -107,16 +107,17 @@ func (a *Aria2Service) ServiceStartup(ctx context.Context, options application.S
 	go a.monitorAria2Process()
 
 	// 同步 aria2 当前状态到 SQLite（恢复上次会话的下载记录）
+	// 注意：此时前端尚未就绪，事件推送会被忽略
 	a.syncAria2State()
 
 	// 从 SQLite 加载用户设置并应用到 aria2（必须在 subscribeToEvents 之前，
 	// 因为 Subscribe 会启动内部 goroutine 消费 WebSocket 消息，干扰同步 RPC 调用）
 	a.loadAndApplySettings()
 
-	// 订阅 aria2 事件，将下载生命周期记录到 SQLite
+	// 订阅 aria2 事件，将下载生命周期记录到 SQLite 并推送到前端
 	a.subscribeToEvents()
 
-	// 启动后台定时刷新下载进度
+	// 启动后台定时刷新下载进度（仅推前端不写库）
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancel = cancel
 	go a.pollActiveDownloads(ctx)
@@ -153,7 +154,34 @@ func (a *Aria2Service) ServiceShutdown() error {
 	return nil
 }
 
-// subscribeToEvents 订阅 aria2 下载生命周期事件，写入 SQLite
+// ==================== 前端事件推送 ====================
+
+// pushDownloadUpdate 将下载记录推送到前端 UI（通过 Wails Events 实时推送）
+func (a *Aria2Service) pushDownloadUpdate(dr *store.DownloadRecord) {
+	application.Get().Event.Emit("download-update", *dr)
+}
+
+// pushDownloadRemoved 通知前端某个 GID 已被移除
+func (a *Aria2Service) pushDownloadRemoved(gid string) {
+	application.Get().Event.Emit("download-removed", gid)
+}
+
+// fetchAndPush 从 SQLite 读取完整记录并推送到前端
+func (a *Aria2Service) fetchAndPush(gid string) {
+	if a.db == nil {
+		return
+	}
+	dr, err := a.db.GetDownload(gid)
+	if err != nil || dr == nil {
+		return
+	}
+	a.pushDownloadUpdate(dr)
+}
+
+// ==================== 事件订阅（状态变更 → SQLite + 前端） ====================
+
+// subscribeToEvents 订阅 aria2 下载生命周期事件
+// 策略：状态变更 → 写入 SQLite（持久化） + 推送到前端（实时 UI）
 func (a *Aria2Service) subscribeToEvents() {
 	if a.db == nil || a.rpcClient == nil {
 		return
@@ -162,18 +190,21 @@ func (a *Aria2Service) subscribeToEvents() {
 	a.rpcClient.Subscribe(arigo.StartEvent, func(ev *arigo.DownloadEvent) {
 		status, err := a.rpcClient.TellStatus(ev.GID, statusKeys...)
 		if err != nil {
-			log.Printf("[Store] TellStatus(GID=%s) 失败: %v", ev.GID, err)
+			log.Printf("[Event] TellStatus(GID=%s) 失败: %v", ev.GID, err)
 			return
 		}
 		a.db.UpdateDownloadStatus(ev.GID, string(status.Status),
 			int64(status.CompletedLength), int64(status.TotalLength),
 			int64(status.DownloadSpeed), int(status.ErrorCode), status.ErrorMessage)
 		a.db.InsertEvent(ev.GID, "start", "")
+		// 实时推送到前端
+		a.fetchAndPush(ev.GID)
 	})
 
 	a.rpcClient.Subscribe(arigo.PauseEvent, func(ev *arigo.DownloadEvent) {
 		a.db.UpdateDownloadStatus(ev.GID, "paused", 0, 0, 0, 0, "")
 		a.db.InsertEvent(ev.GID, "pause", "")
+		a.fetchAndPush(ev.GID)
 	})
 
 	a.rpcClient.Subscribe(arigo.CompleteEvent, func(ev *arigo.DownloadEvent) {
@@ -186,6 +217,7 @@ func (a *Aria2Service) subscribeToEvents() {
 			a.db.UpdateDownloadStatus(ev.GID, "complete", 0, 0, 0, 0, "")
 		}
 		a.db.InsertEvent(ev.GID, "complete", "")
+		a.fetchAndPush(ev.GID)
 	})
 
 	a.rpcClient.Subscribe(arigo.ErrorEvent, func(ev *arigo.DownloadEvent) {
@@ -198,6 +230,7 @@ func (a *Aria2Service) subscribeToEvents() {
 		}
 		a.db.UpdateDownloadStatus(ev.GID, "error", 0, 0, 0, errCode, errMsg)
 		a.db.InsertEvent(ev.GID, "error", fmt.Sprintf(`{"code":%d,"message":"%s"}`, errCode, errMsg))
+		a.fetchAndPush(ev.GID)
 	})
 
 	a.rpcClient.Subscribe(arigo.StopEvent, func(ev *arigo.DownloadEvent) {
@@ -210,6 +243,7 @@ func (a *Aria2Service) subscribeToEvents() {
 			a.db.UpdateDownloadStatus(ev.GID, "removed", 0, 0, 0, 0, "")
 		}
 		a.db.InsertEvent(ev.GID, "stop", "")
+		a.fetchAndPush(ev.GID)
 	})
 }
 
@@ -239,12 +273,28 @@ func (a *Aria2Service) ListEventsByGID(gid string) ([]store.EventRecord, error) 
 	return a.db.ListEventsByGID(gid)
 }
 
-// DeleteDownloadRecord 删除下载记录
+// DeleteDownloadRecord 删除下载记录，并通知前端
 func (a *Aria2Service) DeleteDownloadRecord(gid string) error {
 	if a.db == nil {
 		return fmt.Errorf("数据库不可用")
 	}
-	return a.db.DeleteDownload(gid)
+	if err := a.db.DeleteDownload(gid); err != nil {
+		return err
+	}
+	a.pushDownloadRemoved(gid)
+	return nil
+}
+
+// FindDownloadByURL 根据 URL 查找已存在的下载记录（用于重复检测）
+func (a *Aria2Service) FindDownloadByURL(url string) (*store.DownloadRecord, error) {
+	if a.db == nil {
+		return nil, fmt.Errorf("数据库不可用")
+	}
+	dr, err := a.db.FindDownloadByURL(url)
+	if err != nil {
+		return nil, nil // 查询失败或无匹配均返回 nil,nil
+	}
+	return dr, nil
 }
 
 // ==================== 设置管理 ====================
@@ -315,6 +365,7 @@ func (a *Aria2Service) loadAndApplySettings() {
 }
 
 // syncAria2State 将 aria2 当前的所有下载任务同步到 SQLite（应用启动时调用）
+// 此时前端尚未就绪，不推送事件（前端挂载时会通过 ListDownloads 获取初始状态）
 func (a *Aria2Service) syncAria2State() {
 	if a.db == nil || a.rpcClient == nil {
 		return
@@ -364,7 +415,7 @@ func (a *Aria2Service) syncAria2State() {
 	for _, d := range downloads {
 		existing, err := a.db.GetDownload(d.GID)
 		if err != nil || existing == nil {
-			// 新记录（可能是上次会话遗留下来的）
+			// 新记录（可能来自 aria2 历史 session 恢复）
 			a.db.InsertDownload(&store.DownloadRecord{
 				GID:             d.GID,
 				Status:          d.Status,
@@ -484,6 +535,7 @@ func (a *Aria2Service) syncOneDownloadStatus(gid string) {
 		a.db.UpdateDownloadStatus(gid, string(status.Status),
 			int64(status.CompletedLength), int64(status.TotalLength),
 			int64(status.DownloadSpeed), int(status.ErrorCode), status.ErrorMessage)
+		a.fetchAndPush(gid)
 		return
 	}
 	// TellStatus 失败，在 stopped 列表中查找（completed/error/removed）
@@ -496,17 +548,22 @@ func (a *Aria2Service) syncOneDownloadStatus(gid string) {
 			a.db.UpdateDownloadStatus(gid, string(st.Status),
 				int64(st.CompletedLength), int64(st.TotalLength), 0,
 				int(st.ErrorCode), st.ErrorMessage)
+			a.fetchAndPush(gid)
 			return
 		}
 	}
 }
 
-// pollActiveDownloads 定时轮询活跃下载的进度，每30秒全量同步一次状态
+// pollActiveDownloads 定时轮询
+// 策略：
+//   - 每 3 秒：从 aria2 拉活跃下载的进度，直接推送到前端（不写 SQLite）
+//   - 每 30 秒：全量同步到 SQLite（兜底纠错）并推送全部下载到前端
 func (a *Aria2Service) pollActiveDownloads(ctx context.Context) {
 	ticker := time.NewTicker(3 * time.Second)
 	fullSyncTicker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	defer fullSyncTicker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -515,6 +572,8 @@ func (a *Aria2Service) pollActiveDownloads(ctx context.Context) {
 			// 全量同步：确保 SQLite 状态与 aria2 保持一致
 			if a.db != nil && a.rpcClient != nil {
 				a.syncAria2State()
+				// 全量同步后推送所有记录到前端（从 SQLite 读取完整记录）
+				a.pushAllDownloadsToFrontend()
 				log.Printf("[Poll] 全量同步完成")
 			}
 		case <-ticker.C:
@@ -527,16 +586,34 @@ func (a *Aria2Service) pollActiveDownloads(ctx context.Context) {
 				continue
 			}
 			for _, st := range active {
-				a.db.UpdateDownloadProgress(
-					st.GID,
-					int64(st.CompletedLength),
-					int64(st.TotalLength),
-					int64(st.DownloadSpeed),
-				)
-			}
-			if len(active) > 0 {
-				log.Printf("[Poll] 已更新 %d 个活跃下载的进度到 SQLite", len(active))
+				// 方案：从 SQLite 读取完整记录，用 aria2 的实时进度覆盖
+				existing, err := a.db.GetDownload(st.GID)
+				if err != nil || existing == nil {
+					continue
+				}
+				existing.CompletedLength = int64(st.CompletedLength)
+				existing.TotalLength = int64(st.TotalLength)
+				existing.DownloadSpeed = int64(st.DownloadSpeed)
+				existing.Status = string(st.Status)
+				// 仅推前端，不写 SQLite
+				a.pushDownloadUpdate(existing)
 			}
 		}
+	}
+}
+
+// pushAllDownloadsToFrontend 从 SQLite 读取所有下载记录并推送到前端
+// 用于全量同步兜底，确保前端状态最终一致
+func (a *Aria2Service) pushAllDownloadsToFrontend() {
+	if a.db == nil {
+		return
+	}
+	records, _, err := a.db.ListDownloads("", 0, 1000)
+	if err != nil {
+		log.Printf("[Poll] 读取全量下载记录失败: %v", err)
+		return
+	}
+	for i := range records {
+		a.pushDownloadUpdate(&records[i])
 	}
 }

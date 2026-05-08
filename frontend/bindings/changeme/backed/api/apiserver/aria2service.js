@@ -174,6 +174,17 @@ export function Download(uris, options) {
 }
 
 /**
+ * FindDownloadByURL 根据 URL 查找已存在的下载记录（用于重复检测，返回 nil 表示无重复）
+ * @param {string} url
+ * @returns {$CancellablePromise<store$0.DownloadRecord | null>}
+ */
+export function FindDownloadByURL(url) {
+    return $Call.ByID(1664448380, url).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType4($result);
+    }));
+}
+
+/**
  * @param {string} gid
  * @returns {$CancellablePromise<void>}
  */

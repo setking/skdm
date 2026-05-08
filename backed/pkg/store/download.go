@@ -54,6 +54,25 @@ func (s *Store) DeleteDownload(gid string) error {
 	return err
 }
 
+// FindDownloadByURL 根据 URL 查找下载记录（URL 完全匹配）
+// 返回最近一条匹配的记录，若无匹配则返回 nil
+func (s *Store) FindDownloadByURL(url string) (*DownloadRecord, error) {
+	row := s.db.QueryRow(
+		`SELECT gid, url, dir, filename, total_length, completed_length, download_speed,
+		 status, error_code, error_message, created_at, updated_at, completed_at
+		 FROM downloads WHERE url=? ORDER BY created_at DESC LIMIT 1`, url,
+	)
+	d := &DownloadRecord{}
+	err := row.Scan(&d.GID, &d.URL, &d.Dir, &d.Filename,
+		&d.TotalLength, &d.CompletedLength, &d.DownloadSpeed,
+		&d.Status, &d.ErrorCode, &d.ErrorMessage,
+		&d.CreatedAt, &d.UpdatedAt, &d.CompletedAt)
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
 // GetDownload 获取单条下载记录
 func (s *Store) GetDownload(gid string) (*DownloadRecord, error) {
 	row := s.db.QueryRow(

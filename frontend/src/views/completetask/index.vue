@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, h } from 'vue'
+import { h, onMounted } from 'vue'
 import { NButton, NTag, NSpace, useMessage } from 'naive-ui'
-import { ListDownloads, Remove, DeleteDownloadRecord, RemoveDownloadResult } from '@bindings/changeme/backed/api/apiserver/aria2service'
+import { Remove, DeleteDownloadRecord, RemoveDownloadResult } from '@bindings/changeme/backed/api/apiserver/aria2service'
 import type { DownloadRecord } from '@bindings/changeme/backed/pkg/store/models'
+import { useDownloadStore } from '@/stores/download'
 
 const message = useMessage()
-const downloads = ref<DownloadRecord[]>([])
-const loading = ref(false)
+const store = useDownloadStore()
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 B'
@@ -16,19 +16,8 @@ function formatBytes(bytes: number): string {
   return size.toFixed(i > 0 ? 1 : 0) + ' ' + units[i]
 }
 
-async function fetchDownloads() {
-  loading.value = true
-  try {
-    const [records] = await ListDownloads('complete', 0, 1000)
-    downloads.value = records || []
-  } catch (e) {
-    console.error('获取已完成列表失败:', e)
-  } finally { loading.value = false }
-}
-
 async function handleRemove(gid: string) {
   try { await Remove(gid) } catch (e: any) { message.warning('删除失败: ' + e) }
-  await fetchDownloads()
 }
 async function handleDelete(gid: string) {
   try {
@@ -36,7 +25,6 @@ async function handleDelete(gid: string) {
     await DeleteDownloadRecord(gid)
     message.success('已永久删除')
   } catch (e: any) { message.error('删除失败: ' + e) }
-  await fetchDownloads()
 }
 
 const columns = [
@@ -59,18 +47,20 @@ const columns = [
   },
 ]
 
-onMounted(fetchDownloads)
+onMounted(() => {
+  store.init()
+})
 </script>
 
 <template>
   <div class="page">
     <div class="page-header">
       <h2 class="page-title">已完成</h2>
-      <span class="count">{{ downloads.length }} 个任务</span>
+      <span class="count">{{ store.completedDownloads.length }} 个任务</span>
     </div>
     <div class="table-area">
-      <n-empty v-if="!loading && downloads.length === 0" description="暂无已完成的任务" style="margin-top: 120px" />
-      <n-data-table v-else :columns="columns" :data="downloads" :loading="loading" :bordered="false" striped size="small"
+      <n-empty v-if="store.completedDownloads.length === 0" description="暂无已完成的任务" style="margin-top: 120px" />
+      <n-data-table v-else :columns="columns" :data="store.completedDownloads" :bordered="false" striped size="small"
         flex-height style="height: 100%" />
     </div>
   </div>

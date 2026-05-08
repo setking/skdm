@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, h } from 'vue'
+import { h, onMounted } from 'vue'
 import { NButton, NTag, NSpace, useMessage } from 'naive-ui'
-import { ListDownloads, DeleteDownloadRecord, PurgeDownloadResults, ContinueDownload, RemoveDownloadResult } from '@bindings/changeme/backed/api/apiserver/aria2service'
+import { DeleteDownloadRecord, PurgeDownloadResults, ContinueDownload, RemoveDownloadResult } from '@bindings/changeme/backed/api/apiserver/aria2service'
 import type { DownloadRecord } from '@bindings/changeme/backed/pkg/store/models'
+import { useDownloadStore } from '@/stores/download'
 
 const message = useMessage()
-const downloads = ref<DownloadRecord[]>([])
-const loading = ref(false)
+const store = useDownloadStore()
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 B'
@@ -16,38 +16,26 @@ function formatBytes(bytes: number): string {
   return size.toFixed(i > 0 ? 1 : 0) + ' ' + units[i]
 }
 
-async function fetchDownloads() {
-  loading.value = true
-  try {
-    const [records] = await ListDownloads('removed', 0, 1000)
-    downloads.value = records || []
-  } catch (e) {
-    console.error('获取回收站列表失败:', e)
-  } finally { loading.value = false }
-}
-
 async function handleDelete(gid: string) {
   try {
     await RemoveDownloadResult(gid).catch(() => {})
     await DeleteDownloadRecord(gid)
     message.success('已永久删除')
   } catch (e: any) { message.error('删除失败: ' + e) }
-  await fetchDownloads()
 }
 async function handleContinue(gid: string) {
   try {
     await ContinueDownload(gid)
     message.success('已重新开始下载')
   } catch (e: any) { message.error('重新下载失败: ' + e) }
-  await fetchDownloads()
 }
 async function handlePurgeAll() {
   try {
     await PurgeDownloadResults()
-    for (const d of downloads.value) {
+    const items = [...store.trashedDownloads]
+    for (const d of items) {
       await DeleteDownloadRecord(d.gid).catch(() => {})
     }
-    await fetchDownloads()
     message.success('已清空回收站')
   } catch (e: any) { message.error('清空失败: ' + e) }
 }
@@ -72,7 +60,9 @@ const columns = [
   },
 ]
 
-onMounted(fetchDownloads)
+onMounted(() => {
+  store.init()
+})
 </script>
 
 <template>
@@ -80,13 +70,13 @@ onMounted(fetchDownloads)
     <div class="page-header">
       <h2 class="page-title">回收站</h2>
       <n-space align="center">
-        <span class="count" v-if="downloads.length > 0">{{ downloads.length }} 个任务</span>
-        <n-button v-if="downloads.length > 0" size="small" type="error" quaternary @click="handlePurgeAll">清空回收站</n-button>
+        <span class="count" v-if="store.trashedDownloads.length > 0">{{ store.trashedDownloads.length }} 个任务</span>
+        <n-button v-if="store.trashedDownloads.length > 0" size="small" type="error" quaternary @click="handlePurgeAll">清空回收站</n-button>
       </n-space>
     </div>
     <div class="table-area">
-      <n-empty v-if="!loading && downloads.length === 0" description="回收站为空" style="margin-top: 120px" />
-      <n-data-table v-else :columns="columns" :data="downloads" :loading="loading" :bordered="false" striped size="small"
+      <n-empty v-if="store.trashedDownloads.length === 0" description="回收站为空" style="margin-top: 120px" />
+      <n-data-table v-else :columns="columns" :data="store.trashedDownloads" :bordered="false" striped size="small"
         flex-height style="height: 100%" />
     </div>
   </div>

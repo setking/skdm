@@ -2,13 +2,13 @@ package main
 
 import (
 	"embed"
-	_ "embed"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
 
 	"changeme/backed/api/apiserver"
+	"changeme/backed/pkg/store"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -22,9 +22,13 @@ import (
 var assets embed.FS
 
 func init() {
-	// Register a custom event whose associated data type is string.
-	// This is not required, but the binding generator will pick up registered events
-	// and provide a strongly typed JS/TS API for them.
+	// Register custom events for download status/progress updates.
+	// "download-update" carries a full DownloadRecord for incremental UI sync.
+	// "download-removed" carries the GID string of a removed download.
+	application.RegisterEvent[store.DownloadRecord]("download-update")
+	application.RegisterEvent[string]("download-removed")
+
+	// Legacy time event from template
 	application.RegisterEvent[string]("time")
 }
 
@@ -63,8 +67,8 @@ func main() {
 		Title:     "skdm",
 		Width:     1024,
 		Height:    680,
-		MinWidth:  800,
-		MinHeight: 500,
+		MinWidth:  1024,
+		MinHeight: 680,
 		Frameless: true,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,

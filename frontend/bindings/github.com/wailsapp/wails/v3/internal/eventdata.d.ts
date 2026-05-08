@@ -5,9 +5,15 @@
 // @ts-ignore: Unused imports
 import type { Events } from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as store$0 from "../../../../../changeme/backed/pkg/store/models.js";
+
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
+            "download-removed": string;
+            "download-update": store$0.DownloadRecord;
             "time": string;
         }
     }
