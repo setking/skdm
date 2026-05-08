@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"strconv"
 	"sync"
 	"time"
@@ -86,8 +87,9 @@ func (a *Aria2Service) ServiceStartup(ctx context.Context, options application.S
 		"--allow-overwrite=true",
 		"--continue=true",
 	)
-	a.cmd.Stdout = os.Stdout
-	a.cmd.Stderr = os.Stderr
+	if runtime.GOOS == "windows" {
+		a.cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	}
 	//启动aria2和rpc服务
 	if err := a.cmd.Start(); err != nil {
 		return fmt.Errorf("启动 aria2server 进程失败: %w", err)
@@ -505,8 +507,9 @@ func (a *Aria2Service) monitorAria2Process() {
 		"--allow-overwrite=true",
 		"--continue=true",
 	)
-	a.cmd.Stdout = os.Stdout
-	a.cmd.Stderr = os.Stderr
+	if runtime.GOOS == "windows" {
+		a.cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	}
 	if err := a.cmd.Start(); err != nil {
 		log.Printf("[Aria2Service] 重新启动 aria2c 失败: %v", err)
 		return
