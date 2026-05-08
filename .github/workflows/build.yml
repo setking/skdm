@@ -25,7 +25,7 @@ jobs:
       - name: Setup pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@latest --activate
+          corepack prepare pnpm@9 --activate
 
       - name: Install frontend dependencies
         run: cd frontend && pnpm install
