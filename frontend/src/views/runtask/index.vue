@@ -66,7 +66,7 @@ const columns = [
   { title: '保存到', key: 'dir', ellipsis: { tooltip: true }, width: 180 },
   { title: '操作', key: 'actions', width: 140,
     render(row: DownloadRecord) {
-      const btns = []
+      const btns: any[] = []
       if (row.status === 'active' || row.status === 'waiting') {
         btns.push(h(NButton, { size: 'tiny', quaternary: true, onClick: () => handlePause(row.gid) }, () => '暂停'))
         btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleRemove(row.gid) }, () => '删除'))

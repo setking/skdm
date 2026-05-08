@@ -82,7 +82,7 @@ const columns = [
   { title: '创建时间', key: 'created_at', width: 160, render(row: DownloadRecord) { return row.created_at?.replace('T', ' ').slice(0, 19) || '-' } },
   { title: '操作', key: 'actions', width: 180,
     render(row: DownloadRecord) {
-      const btns = []
+      const btns: any[] = []
       if (row.status === 'paused') {
         btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'primary', onClick: () => handleContinue(row.gid) }, () => '恢复下载'))
         btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleRemove(row.gid) }, () => '移到回收站'))

@@ -11,7 +11,7 @@ async function handleToggleMaximise() {
   try {
     isMaximised.value = await Window.IsMaximised()
     if (isMaximised.value) {
-      Window.Unmaximise()
+      Window.UnMaximise()
     } else {
       Window.Maximise()
     }

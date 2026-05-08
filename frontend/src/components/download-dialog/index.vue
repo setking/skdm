@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useMessage } from 'naive-ui'
 import { DownloadOutline, FolderOpenOutline, LinkOutline } from '@vicons/ionicons5'
 import { Dialogs } from '@wailsio/runtime'
 import { AddURI, GetDefaultDownloadDir, FindDownloadByURL, DeleteDownloadRecord } from '@bindings/changeme/backed/api/apiserver/aria2service'
@@ -62,7 +63,8 @@ function extractFileName(link: string): string {
   if (link.startsWith('ed2k://')) {
     const match = link.match(/\|([^|]+)\|(\d+)\|/)
     if (match) {
-      return decodeURIComponent(match[1])
+      const name = match[1]
+      return name ? decodeURIComponent(name) : 'ed2k_download'
     }
     return 'ed2k_download'
   }
@@ -70,7 +72,11 @@ function extractFileName(link: string): string {
   // magnet 链接
   if (link.startsWith('magnet:')) {
     const match = link.match(/dn=([^&]+)/)
-    return match ? decodeURIComponent(match[1]) : 'magnet_download'
+    if (match) {
+      const name = match[1]
+      return name ? decodeURIComponent(name) : 'magnet_download'
+    }
+    return 'magnet_download'
   }
 
   // http/https/ftp
@@ -193,9 +199,7 @@ async function handleOk() {
         Dialogs.Question({
           Title: '确认重新下载',
           Message: `该任务（${prevName}）之前已下载完成。\n是否重新下载？重新下载将覆盖之前的任务记录。`,
-          Buttons: ['重新下载', '取消'],
-          DefaultButton: '取消',
-          CancelButton: '取消',
+          Buttons: [{ Label: '重新下载', IsDefault: true }, { Label: '取消', IsCancel: true }],
         }).then((resp: string) => {
           resolve(resp === '重新下载')
         }).catch(() => resolve(false))
