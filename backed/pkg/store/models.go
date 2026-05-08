@@ -27,6 +27,8 @@ type Settings struct {
 	Continue               bool   `json:"continue_download"`
 	AllowOverwrite         bool   `json:"allow_overwrite"`
 	AutoFileRenaming       bool   `json:"auto_file_renaming"`
+	AutoCheckUpdate        bool   `json:"auto_check_update"`
+	AutoStartUnfinished    bool   `json:"auto_start_unfinished"`
 }
 
 // DefaultSettings 返回默认设置
@@ -40,6 +42,8 @@ func DefaultSettings() *Settings {
 		Continue:               true,
 		AllowOverwrite:         true,
 		AutoFileRenaming:       true,
+		AutoCheckUpdate:        true,
+		AutoStartUnfinished:    true,
 	}
 }
 

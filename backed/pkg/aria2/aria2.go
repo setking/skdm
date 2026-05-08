@@ -116,6 +116,9 @@ func (a *Aria2Service) ServiceStartup(ctx context.Context, options application.S
 	// 因为 Subscribe 会启动内部 goroutine 消费 WebSocket 消息，干扰同步 RPC 调用）
 	a.loadAndApplySettings()
 
+	// 如果用户关闭了"启动时自动开始未完成任务"，暂停所有由 session 恢复的任务
+	a.pauseAllIfAutoStartDisabled()
+
 	// 订阅 aria2 事件，将下载生命周期记录到 SQLite 并推送到前端
 	a.subscribeToEvents()
 
@@ -364,6 +367,26 @@ func (a *Aria2Service) loadAndApplySettings() {
 		settings.DefaultDownloadDir, settings.MaxConcurrentDownloads,
 		settings.MaxConnectionPerServer, settings.Split)
 	a.applySettingsToAria2(settings)
+}
+
+// pauseAllIfAutoStartDisabled 如果用户关闭了"启动时自动开始未完成任务"，
+// 暂停所有由 aria2c session 恢复的活跃/等待任务
+func (a *Aria2Service) pauseAllIfAutoStartDisabled() {
+	if a.db == nil || a.rpcClient == nil {
+		return
+	}
+	settings, err := a.db.GetSettings()
+	if err != nil {
+		log.Printf("[AutoStart] 读取设置失败: %v", err)
+		return
+	}
+	if settings.AutoStartUnfinished {
+		return
+	}
+	log.Println("[AutoStart] 已关闭自动开始未完成任务，暂停所有任务...")
+	if err := a.rpcClient.PauseAll(); err != nil {
+		log.Printf("[AutoStart] 暂停所有任务失败: %v", err)
+	}
 }
 
 // syncAria2State 将 aria2 当前的所有下载任务同步到 SQLite（应用启动时调用）

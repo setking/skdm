@@ -246,6 +246,20 @@ export class Settings {
              */
             this["auto_file_renaming"] = false;
         }
+        if (!("auto_check_update" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["auto_check_update"] = false;
+        }
+        if (!("auto_start_unfinished" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["auto_start_unfinished"] = false;
+        }
 
         Object.assign(this, $$source);
     }

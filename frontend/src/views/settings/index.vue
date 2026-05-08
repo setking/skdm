@@ -2,17 +2,18 @@
 import { ref, onMounted, computed } from 'vue'
 import {
   NForm, NFormItem, NInput, NInputNumber, NSwitch, NButton,
-  NCard, NSpin, useMessage
+  NCard, NSpin, NTag, useMessage
 } from 'naive-ui'
 import { Dialogs } from '@wailsio/runtime'
-import { GetSettings, SaveSettings } from '@bindings/changeme/backed/api/apiserver/aria2service'
+import { GetSettings, SaveSettings, CheckForUpdate, GetAppVersion } from '@bindings/changeme/backed/api/apiserver/aria2service'
 import type { Settings } from '@bindings/changeme/backed/pkg/store/models'
 import {FolderOpenOutline} from "@vicons/ionicons5";
 
 const message = useMessage()
 const loading = ref(false)
 const saving = ref(false)
-
+const checkingUpdate = ref(false)
+const appVersion = ref('')
 
 const form = ref<Settings>({
   default_download_dir: './download',
@@ -23,6 +24,8 @@ const form = ref<Settings>({
   continue_download: true,
   allow_overwrite: true,
   auto_file_renaming: true,
+  auto_check_update: true,
+  auto_start_unfinished: true,
 })
 // 选择下载目录
 async function selectFolder() {
@@ -53,6 +56,7 @@ async function loadSettings() {
     if (settings) {
       Object.assign(form.value, settings)
     }
+    appVersion.value = await GetAppVersion()
   } catch (e) {
     console.error('加载设置失败:', e)
   } finally {
@@ -72,8 +76,29 @@ async function handleSave() {
   }
 }
 
-onMounted(() => {
-  loadSettings()
+async function handleCheckUpdate() {
+  checkingUpdate.value = true
+  try {
+    const result = await CheckForUpdate()
+    if (result.error) {
+      message.error('检查更新失败: ' + result.error)
+    } else if (result.has_update) {
+      message.info(`发现新版本 v${result.latest_version}，当前版本 v${result.current_version}`, { duration: 8000 })
+    } else {
+      message.success('已是最新版本')
+    }
+  } catch (e: any) {
+    message.error('检查更新失败: ' + (e?.message || e))
+  } finally {
+    checkingUpdate.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadSettings()
+  if (form.value.auto_check_update) {
+    handleCheckUpdate()
+  }
 })
 </script>
 
@@ -119,6 +144,10 @@ onMounted(() => {
               <n-switch v-model:value="form.continue_download" />
               <span class="hint">应用重启后继续未完成的下载</span>
             </n-form-item>
+            <n-form-item label="启动时自动开始任务">
+              <n-switch v-model:value="form.auto_start_unfinished" />
+              <span class="hint">关闭后启动时所有任务暂停，需手动恢复</span>
+            </n-form-item>
           </n-card>
 
           <!-- 文件设置 -->
@@ -138,6 +167,20 @@ onMounted(() => {
             <n-form-item label="全局下载限速">
               <n-input-number v-model:value="speedLimitKB" :min="0" :step="100" style="width: 160px" placeholder="0" />
               <span class="hint">KB/s，0 表示不限速</span>
+            </n-form-item>
+          </n-card>
+
+          <!-- 更新设置 -->
+          <n-card title="更新" size="small" :bordered="false" style="margin-bottom: 16px">
+            <n-form-item label="当前版本">
+              <n-tag type="info" size="small">v{{ appVersion }}</n-tag>
+            </n-form-item>
+            <n-form-item label="自动检查更新">
+              <n-switch v-model:value="form.auto_check_update" />
+              <span class="hint">启动时自动检查是否有新版本</span>
+            </n-form-item>
+            <n-form-item label="手动检查">
+              <n-button size="small" :loading="checkingUpdate" @click="handleCheckUpdate">检查更新</n-button>
             </n-form-item>
           </n-card>
 

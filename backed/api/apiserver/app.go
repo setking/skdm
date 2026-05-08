@@ -274,3 +274,15 @@ func (a *Aria2Service) GetSettings() (*store.Settings, error) {
 func (a *Aria2Service) SaveSettings(s *store.Settings) error {
 	return a.svc.SaveSettings(s)
 }
+
+// ==================== 版本与更新 ====================
+
+// GetAppVersion 返回应用版本号
+func (a *Aria2Service) GetAppVersion() string {
+	return a.svc.GetAppVersion()
+}
+
+// CheckForUpdate 检查 GitHub Release 是否有新版本
+func (a *Aria2Service) CheckForUpdate() *aria2.UpdateCheckResult {
+	return a.svc.CheckForUpdate()
+}

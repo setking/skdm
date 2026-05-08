@@ -8,6 +8,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as aria2$0 from "../../pkg/aria2/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as store$0 from "../../pkg/store/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -135,6 +138,16 @@ export function ChangeURIAt(gid, fileIndex, delURIs, addURIs, position) {
 }
 
 /**
+ * CheckForUpdate 检查 GitHub Release 是否有新版本
+ * @returns {$CancellablePromise<aria2$0.UpdateCheckResult | null>}
+ */
+export function CheckForUpdate() {
+    return $Call.ByID(1523728867).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType3($result);
+    }));
+}
+
+/**
  * ContinueDownload 从历史记录继续未完成的下载
  * @param {string} gid
  * @returns {$CancellablePromise<arigo$0.GID>}
@@ -169,7 +182,7 @@ export function DeleteDownloadRecord(gid) {
  */
 export function Download(uris, options) {
     return $Call.ByID(1586351329, uris, options).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType2($result);
+        return $$createType4($result);
     }));
 }
 
@@ -180,7 +193,7 @@ export function Download(uris, options) {
  */
 export function FindDownloadByURL(url) {
     return $Call.ByID(1664448380, url).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType4($result);
+        return $$createType6($result);
     }));
 }
 
@@ -215,6 +228,14 @@ export function ForceShutdown() {
 }
 
 /**
+ * GetAppVersion 返回应用版本号
+ * @returns {$CancellablePromise<string>}
+ */
+export function GetAppVersion() {
+    return $Call.ByID(1435939462);
+}
+
+/**
  * GetDefaultDownloadDir 获取上次使用的下载目录（从 SQLite 读取）
  * @returns {$CancellablePromise<string>}
  */
@@ -229,7 +250,7 @@ export function GetDefaultDownloadDir() {
  */
 export function GetDownload(gid) {
     return $Call.ByID(826451291, gid).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType4($result);
+        return $$createType6($result);
     }));
 }
 
@@ -239,7 +260,7 @@ export function GetDownload(gid) {
  */
 export function GetFiles(gid) {
     return $Call.ByID(3555216470, gid).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType6($result);
+        return $$createType8($result);
     }));
 }
 
@@ -258,7 +279,7 @@ export function GetGID(gid) {
  */
 export function GetGlobalOptions() {
     return $Call.ByID(887462282).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType9($result);
     }));
 }
 
@@ -267,7 +288,7 @@ export function GetGlobalOptions() {
  */
 export function GetGlobalStats() {
     return $Call.ByID(640655199).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType8($result);
+        return $$createType10($result);
     }));
 }
 
@@ -277,7 +298,7 @@ export function GetGlobalStats() {
  */
 export function GetOptions(gid) {
     return $Call.ByID(2924744555, gid).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType9($result);
     }));
 }
 
@@ -287,7 +308,7 @@ export function GetOptions(gid) {
  */
 export function GetPeers(gid) {
     return $Call.ByID(3707403540, gid).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType10($result);
+        return $$createType12($result);
     }));
 }
 
@@ -297,7 +318,7 @@ export function GetPeers(gid) {
  */
 export function GetServers(gid) {
     return $Call.ByID(1945979029, gid).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType12($result);
+        return $$createType14($result);
     }));
 }
 
@@ -306,7 +327,7 @@ export function GetServers(gid) {
  */
 export function GetSessionInfo() {
     return $Call.ByID(3060104193).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType13($result);
+        return $$createType15($result);
     }));
 }
 
@@ -316,7 +337,7 @@ export function GetSessionInfo() {
  */
 export function GetSettings() {
     return $Call.ByID(2427175778).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType15($result);
+        return $$createType17($result);
     }));
 }
 
@@ -326,7 +347,7 @@ export function GetSettings() {
  */
 export function GetURIs(gid) {
     return $Call.ByID(822278332, gid).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType17($result);
+        return $$createType19($result);
     }));
 }
 
@@ -335,7 +356,7 @@ export function GetURIs(gid) {
  */
 export function GetVersion() {
     return $Call.ByID(1619621777).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType18($result);
+        return $$createType20($result);
     }));
 }
 
@@ -348,7 +369,7 @@ export function GetVersion() {
  */
 export function ListDownloads(status, offset, limit) {
     return $Call.ByID(3170557266, status, offset, limit).then(/** @type {($result: any) => any} */(($result) => {
-        $result[0] = $$createType19($result[0]);
+        $result[0] = $$createType21($result[0]);
         return $result;
     }));
 }
@@ -360,7 +381,7 @@ export function ListDownloads(status, offset, limit) {
  */
 export function ListEventsByGID(gid) {
     return $Call.ByID(2255594963, gid).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType21($result);
+        return $$createType23($result);
     }));
 }
 
@@ -370,7 +391,7 @@ export function ListEventsByGID(gid) {
  */
 export function MultiCall(...methods) {
     return $Call.ByID(1879961790, methods).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType23($result);
+        return $$createType25($result);
     }));
 }
 
@@ -450,7 +471,7 @@ export function Subscribe(evtType, listener) {
  */
 export function TellActive(...keys) {
     return $Call.ByID(3030015388, keys).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType24($result);
+        return $$createType26($result);
     }));
 }
 
@@ -461,7 +482,7 @@ export function TellActive(...keys) {
  */
 export function TellStatus(gid, ...keys) {
     return $Call.ByID(2921941524, gid, keys).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType2($result);
+        return $$createType4($result);
     }));
 }
 
@@ -473,7 +494,7 @@ export function TellStatus(gid, ...keys) {
  */
 export function TellStopped(offset, num, ...keys) {
     return $Call.ByID(454591527, offset, num, keys).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType24($result);
+        return $$createType26($result);
     }));
 }
 
@@ -485,7 +506,7 @@ export function TellStopped(offset, num, ...keys) {
  */
 export function TellWaiting(offset, num, ...keys) {
     return $Call.ByID(542714025, offset, num, keys).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType24($result);
+        return $$createType26($result);
     }));
 }
 
@@ -515,26 +536,28 @@ export function WaitForDownload(gid) {
 // Private type creation functions
 const $$createType0 = arigo$0.GID.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = arigo$0.Status.createFrom;
-const $$createType3 = store$0.DownloadRecord.createFrom;
-const $$createType4 = $Create.Nullable($$createType3);
-const $$createType5 = arigo$0.File.createFrom;
-const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = arigo$0.Options.createFrom;
-const $$createType8 = arigo$0.Stats.createFrom;
-const $$createType9 = arigo$0.Peer.createFrom;
-const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = arigo$0.FileServers.createFrom;
+const $$createType2 = aria2$0.UpdateCheckResult.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = arigo$0.Status.createFrom;
+const $$createType5 = store$0.DownloadRecord.createFrom;
+const $$createType6 = $Create.Nullable($$createType5);
+const $$createType7 = arigo$0.File.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = arigo$0.Options.createFrom;
+const $$createType10 = arigo$0.Stats.createFrom;
+const $$createType11 = arigo$0.Peer.createFrom;
 const $$createType12 = $Create.Array($$createType11);
-const $$createType13 = arigo$0.SessionInfo.createFrom;
-const $$createType14 = store$0.Settings.createFrom;
-const $$createType15 = $Create.Nullable($$createType14);
-const $$createType16 = arigo$0.URI.createFrom;
-const $$createType17 = $Create.Array($$createType16);
-const $$createType18 = arigo$0.VersionInfo.createFrom;
-const $$createType19 = $Create.Array($$createType3);
-const $$createType20 = store$0.EventRecord.createFrom;
-const $$createType21 = $Create.Array($$createType20);
-const $$createType22 = arigo$0.MethodResult.createFrom;
+const $$createType13 = arigo$0.FileServers.createFrom;
+const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = arigo$0.SessionInfo.createFrom;
+const $$createType16 = store$0.Settings.createFrom;
+const $$createType17 = $Create.Nullable($$createType16);
+const $$createType18 = arigo$0.URI.createFrom;
+const $$createType19 = $Create.Array($$createType18);
+const $$createType20 = arigo$0.VersionInfo.createFrom;
+const $$createType21 = $Create.Array($$createType5);
+const $$createType22 = store$0.EventRecord.createFrom;
 const $$createType23 = $Create.Array($$createType22);
-const $$createType24 = $Create.Array($$createType2);
+const $$createType24 = arigo$0.MethodResult.createFrom;
+const $$createType25 = $Create.Array($$createType24);
+const $$createType26 = $Create.Array($$createType4);

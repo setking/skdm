@@ -39,6 +39,8 @@ func (s *Store) SaveSettings(st *Settings) error {
 	_ = s.SetSetting("continue_download", strconv.FormatBool(st.Continue))
 	_ = s.SetSetting("allow_overwrite", strconv.FormatBool(st.AllowOverwrite))
 	_ = s.SetSetting("auto_file_renaming", strconv.FormatBool(st.AutoFileRenaming))
+	_ = s.SetSetting("auto_check_update", strconv.FormatBool(st.AutoCheckUpdate))
+	_ = s.SetSetting("auto_start_unfinished", strconv.FormatBool(st.AutoStartUnfinished))
 	return nil
 }
 
@@ -82,6 +84,16 @@ func (s *Store) GetSettings() (*Settings, error) {
 	if v, err := s.GetSetting("auto_file_renaming"); err == nil && v != "" {
 		if b, err2 := strconv.ParseBool(v); err2 == nil {
 			settings.AutoFileRenaming = b
+		}
+	}
+	if v, err := s.GetSetting("auto_check_update"); err == nil && v != "" {
+		if b, err2 := strconv.ParseBool(v); err2 == nil {
+			settings.AutoCheckUpdate = b
+		}
+	}
+	if v, err := s.GetSetting("auto_start_unfinished"); err == nil && v != "" {
+		if b, err2 := strconv.ParseBool(v); err2 == nil {
+			settings.AutoStartUnfinished = b
 		}
 	}
 	return settings, nil
