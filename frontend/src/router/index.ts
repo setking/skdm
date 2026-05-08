@@ -1,5 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import Layout from '@/layout/index.vue'
+import Layout from "@/layout/index.vue";
+import { createRouter, createWebHistory } from "vue-router";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -8,44 +8,36 @@ const router = createRouter({
       path: "/redirect",
       component: Layout,
       meta: {
-        hidden: true
+        hidden: true,
       },
       children: [
         {
           path: ":path(.*)",
-          component: () => import("@/views/redirect/index.vue")
-        }
-      ]
+          component: () => import("@/views/redirect/index.vue"),
+        },
+      ],
     },
     {
       path: "/403",
       component: () => import("@/views/error/403.vue"),
       meta: {
-        hidden: true
-      }
+        hidden: true,
+      },
+    },
+    {
+      path: "/tray-task",
+      component: () => import("@/views/tray-task/index.vue"),
+      meta: {
+        hidden: true,
+      },
     },
     {
       path: "/404",
       component: () => import("@/views/error/404.vue"),
       meta: {
-        hidden: true
+        hidden: true,
       },
-      alias: "/:pathMatch(.*)*"
-    },
-    {
-      path: "/",
-      component: Layout,
-      redirect: "/unfinished",
-      children: [
-        {
-          path: "unfinished",
-          component: () => import("@/views/alltask/index.vue"),
-          name: "unfinished",
-          meta: {
-            title: "未完成",
-          }
-        }
-      ]
+      alias: "/:pathMatch(.*)*",
     },
     {
       path: "/complete",
@@ -58,12 +50,28 @@ const router = createRouter({
           name: "complete",
           meta: {
             title: "已完成任务",
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
-      path: "/run",
+      path: "/unfinished",
+      component: Layout,
+      redirect: "/unfinished",
+      children: [
+        {
+          path: "unfinished",
+          component: () => import("@/views/alltask/index.vue"),
+          name: "unfinished",
+          meta: {
+            title: "未完成",
+          },
+        },
+      ],
+    },
+
+    {
+      path: "/",
       component: Layout,
       redirect: "/run",
       children: [
@@ -73,9 +81,9 @@ const router = createRouter({
           name: "run",
           meta: {
             title: "正在运行的任务",
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       path: "/trash",
@@ -88,9 +96,9 @@ const router = createRouter({
           name: "trash",
           meta: {
             title: "回收站",
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
     {
       path: "/settings",
@@ -103,11 +111,11 @@ const router = createRouter({
           name: "settings",
           meta: {
             title: "设置",
-          }
-        }
-      ]
+          },
+        },
+      ],
     },
   ],
-})
+});
 
-export default router
+export default router;

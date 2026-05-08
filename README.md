@@ -95,6 +95,11 @@
 - [x] 后端服务进程优雅关闭
 - [x] GitHub Actions CI/CD：自动构建 + NSIS 安装器打包 + Release 发布
 - [x] 跨平台构建流水线（Windows NSIS/MSIX、macOS .app、Linux AppImage、Docker）
+- [x] 系统托盘：图标 + 右键菜单（新建任务/打开主面板/退出程序）
+  - [x] 左键单击托盘图标：窗口居中显示/隐藏
+  - [x] 主窗口关闭时最小化到托盘，不退出程序
+  - [x] 主窗口隐藏时新建任务弹窗独立居中展示
+- [x] aria2c 后台静默运行（隐藏命令行窗口）
 
 ### 待实现
 
@@ -102,7 +107,6 @@
 - [ ] 批量下载（导入链接列表）
 - [ ] 全局状态统计（aria2.getGlobalStat）
 - [ ] 剪贴板监听自动弹出下载对话框
-- [ ] 托盘图标最小化到系统托盘
 
 ## 技术栈
 
@@ -182,6 +186,7 @@ skdm/
 │   │   │   ├── alltask/             # 未完成（error/paused，可恢复/重试/删除）
 │   │   │   ├── completetask/        # 已完成
 │   │   │   ├── trashtask/           # 回收站（可清空/恢复/永久删除）
+│   │   │   ├── tray-task/            # 托盘新建任务独立弹窗页面
 │   │   │   ├── settings/            # 设置（下载目录、连接、限速等）
 │   │   │   └── error/               # 403 / 404 错误页
 │   │   └── assets/                  # 样式、字体等
@@ -284,7 +289,10 @@ pnpm lint         # 代码检查
 3. 重新运行 `wails3 dev` 或 `wails3 generate bindings` 更新前端 binding
 4. 在前端组件中导入生成的 binding 函数调用
 
-### 无边框窗口
+### 无边框窗口与系统托盘
 
 - 窗口控制通过 `@wailsio/runtime` 的 `Window` API
 - 标题栏拖拽：CSS `-webkit-app-region: drag`，按钮区域 `no-drag`
+- 系统托盘：`application.SystemTray` + `build/windows/icon.ico`
+- 窗口关闭拦截：`RegisterHook(events.Common.WindowClosing)` 隐藏窗口而非销毁
+- 托盘 "新建任务" 弹窗：独立 WebviewWindow 加载 `/tray-task` 路由

@@ -1,10 +1,10 @@
 <template>
-  <n-menu v-model:value="allTask" :options="menuOptions" @update:value="handleUpdateValue"/>
+  <n-menu v-model:value="allTask" :options="menuOptions" @update:value="handleUpdateValue" />
 </template>
 
 <script setup lang="ts">
-import type {MenuOption} from 'naive-ui'
-import type {Component} from 'vue'
+import type { MenuOption } from 'naive-ui'
+import type { Component } from 'vue'
 import { ref } from 'vue'
 import {
   AlertCircleSharp as AlertCircleIcon,
@@ -13,17 +13,17 @@ import {
   CaretForwardSharp as CaretForwardIcon,
   CheckmarkCircleSharp as CheckmarkCircleIcon,
 } from '@vicons/ionicons5'
-import {NIcon} from 'naive-ui'
-import {h} from 'vue'
-import {RouterLink} from 'vue-router'
-const allTask = ref('unfinished-task')
+import { NIcon } from 'naive-ui'
+import { h } from 'vue'
+import { RouterLink } from 'vue-router'
+const allTask = ref('run-task')
 function renderIcon(icon: Component) {
-  return () => h(NIcon, null, {default: () => h(icon)})
+  return () => h(NIcon, null, { default: () => h(icon) })
 }
 
 
 function handleUpdateValue(key: string, item: MenuOption) {
-  console.log(item,key)
+  console.log(item, key)
 }
 
 const menuOptions: MenuOption[] = [
@@ -36,7 +36,7 @@ const menuOptions: MenuOption[] = [
             name: 'run',
           }
         },
-        {default: () => '下载中'}
+        { default: () => '下载中' }
       ),
     key: 'run-task',
     icon: renderIcon(CaretForwardIcon)
@@ -50,7 +50,7 @@ const menuOptions: MenuOption[] = [
             name: 'unfinished',
           }
         },
-        {default: () => '未完成'}
+        { default: () => '未完成' }
       ),
     key: 'unfinished-task',
     icon: renderIcon(AlertCircleIcon)
@@ -64,7 +64,7 @@ const menuOptions: MenuOption[] = [
             name: 'complete',
           }
         },
-        {default: () => '已完成'}
+        { default: () => '已完成' }
       ),
     key: 'complete-task',
     icon: renderIcon(CheckmarkCircleIcon)
@@ -78,7 +78,7 @@ const menuOptions: MenuOption[] = [
             name: 'trash',
           }
         },
-        {default: () => '回收站'}
+        { default: () => '回收站' }
       ),
     key: 'trash-task',
     icon: renderIcon(TrashIcon)
@@ -92,7 +92,7 @@ const menuOptions: MenuOption[] = [
             name: 'settings',
           }
         },
-        {default: () => '设置'}
+        { default: () => '设置' }
       ),
     key: 'settings',
     icon: renderIcon(SettingsIcon)

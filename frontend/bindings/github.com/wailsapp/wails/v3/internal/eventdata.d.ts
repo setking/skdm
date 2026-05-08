@@ -15,6 +15,7 @@ declare module "@wailsio/runtime" {
             "download-removed": string;
             "download-update": store$0.DownloadRecord;
             "time": string;
+            "tray-new-task": string;
         }
     }
 }

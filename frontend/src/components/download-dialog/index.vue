@@ -198,7 +198,7 @@ async function handleOk() {
         const prevName = dup.record.filename || dup.record.url
         Dialogs.Question({
           Title: '确认重新下载',
-          Message: `该任务（${prevName}）之前已下载完成。\n是否重新下载？重新下载将覆盖之前的任务记录。`,
+          Message: `（${prevName}）已经有相同的任务。\n是否重新下载？重新下载将覆盖之前的任务记录。`,
           Buttons: [{ Label: '重新下载', IsDefault: true }, { Label: '取消', IsCancel: true }],
         }).then((resp: string) => {
           resolve(resp === '重新下载')

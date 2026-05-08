@@ -11,6 +11,7 @@ import (
 	"changeme/backed/pkg/store"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -21,6 +22,13 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/windows/icon.ico
+var trayIcon []byte
+
+// forceQuit is set to true when the user selects "退出程序" from the tray menu,
+// allowing the window close hook to let the window actually close.
+var forceQuit bool
+
 func init() {
 	// Register custom events for download status/progress updates.
 	// "download-update" carries a full DownloadRecord for incremental UI sync.
@@ -28,8 +36,36 @@ func init() {
 	application.RegisterEvent[store.DownloadRecord]("download-update")
 	application.RegisterEvent[string]("download-removed")
 
+	// "tray-new-task" is emitted when the user clicks "新建任务" in the tray menu.
+	// The frontend listens for this to show the download dialog.
+	application.RegisterEvent[string]("tray-new-task")
+
 	// Legacy time event from template
 	application.RegisterEvent[string]("time")
+}
+
+// openDownloadPopup creates (or reuses) a small centered popup window
+// that renders just the download dialog at /tray-task.
+func openDownloadPopup(app *application.App) {
+	const popupName = "skdm-download-dialog"
+	// Reuse existing popup if it already exists
+	if popup, ok := app.Window.GetByName(popupName); ok {
+		popup.Center()
+		popup.Show().Focus()
+		return
+	}
+	popup := app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:                      popupName,
+		Title:                     "新建下载任务",
+		Width:                     600,
+		Height:                    450,
+		URL:                       "/tray-task",
+		Frameless:                 true,
+		DisableResize:             true,
+		BackgroundColour:          application.NewRGB(27, 38, 54),
+		DefaultContextMenuDisabled: true,
+	})
+	popup.Center()
 }
 
 // main function serves as the application's entry point. It initializes the application, creates a window,
@@ -53,8 +89,11 @@ func main() {
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
+		Windows: application.WindowsOptions{
+			DisableQuitOnLastWindowClosed: true,
+		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
 
@@ -63,7 +102,7 @@ func main() {
 	// 'Mac' options tailor the window when running on macOS.
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	mainWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "skdm",
 		Width:     1024,
 		Height:    680,
@@ -78,6 +117,57 @@ func main() {
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",
 	})
+
+	// Intercept window close to hide instead of destroy.
+	// This allows the app to stay alive in the system tray.
+	mainWindow.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
+		if forceQuit {
+			return // allow actual close when quitting from tray menu
+		}
+		event.Cancel()
+		mainWindow.Hide()
+	})
+
+	// Set up system tray
+	tray := app.SystemTray.New()
+	tray.SetIcon(trayIcon)
+	tray.SetTooltip("SKDM - 下载管理器")
+	tray.AttachWindow(mainWindow)
+
+	// Override left-click to toggle window centered on screen
+	// (default AttachWindow behavior positions near tray icon, we want centered)
+	tray.OnClick(func() {
+		if mainWindow.IsVisible() {
+			mainWindow.Hide()
+		} else {
+			mainWindow.Center()
+			mainWindow.Show().Focus()
+		}
+	})
+
+	// Build right-click tray menu
+	trayMenu := app.NewMenu()
+	trayMenu.Add("新建任务").OnClick(func(ctx *application.Context) {
+		if mainWindow.IsVisible() {
+			// Main window visible: show dialog inside it
+			app.Event.Emit("tray-new-task", "")
+		} else {
+			// Main window hidden: open a standalone popup dialog centered on screen
+			openDownloadPopup(app)
+		}
+	})
+	trayMenu.Add("打开主面板").OnClick(func(ctx *application.Context) {
+		if !mainWindow.IsVisible() {
+			mainWindow.Center()
+		}
+		mainWindow.Show().Focus()
+	})
+	trayMenu.AddSeparator()
+	trayMenu.Add("退出程序").OnClick(func(ctx *application.Context) {
+		forceQuit = true
+		app.Quit()
+	})
+	tray.SetMenu(trayMenu)
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.

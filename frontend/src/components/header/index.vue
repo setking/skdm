@@ -1,11 +1,27 @@
 <script setup lang="ts">
-import { Window } from '@wailsio/runtime'
+import { Window, Events } from '@wailsio/runtime'
 import { Add, Close, Remove, ExpandOutline, ContractOutline } from '@vicons/ionicons5'
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import DownloadDialog from '@/components/download-dialog/index.vue'
 
 const isMaximised = ref(false)
 const showDownloadDialog = ref(false)
+
+let unsubTrayNewTask: (() => void) | null = null
+
+onMounted(() => {
+  // Listen for tray menu "新建任务" click
+  unsubTrayNewTask = Events.On('tray-new-task', () => {
+    showDownloadDialog.value = true
+  })
+})
+
+onUnmounted(() => {
+  if (unsubTrayNewTask) {
+    unsubTrayNewTask()
+    unsubTrayNewTask = null
+  }
+})
 
 async function handleToggleMaximise() {
   try {
