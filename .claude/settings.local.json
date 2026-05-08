@@ -4,7 +4,17 @@
       "Read(//d/go/pkg/mod/github.com/wailsapp/wails/**)",
       "Bash(go build:*)",
       "Read(//d/go/pkg/mod/github.com/siku2/arigo@v0.3.0/**)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Read(//c/Users/**)",
+      "Bash(go env:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(wails3 generate:*)",
+      "Bash(wails3 build:*)",
+      "Bash(npx vite build)",
+      "Bash(makensis:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
