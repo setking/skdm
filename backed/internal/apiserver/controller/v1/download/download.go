@@ -654,16 +654,22 @@ func (d *DownloadController) recordNewDownload(ctx context.Context, gid string, 
 	}
 
 	if dir != "" {
-		_ = d.srv.Settings().SetSetting("default_download_dir", dir)
+		if err := d.srv.Settings().SetSetting("default_download_dir", dir); err != nil {
+			log.Printf("[Download] 保存默认下载目录失败: %v", err)
+		}
 	}
-	_ = d.srv.Downloads().InsertDownload(ctx, &dv1.DownloadRecord{
+	if err := d.srv.Downloads().InsertDownload(ctx, &dv1.DownloadRecord{
 		GID:      gid,
 		URL:      url,
 		Dir:      dir,
 		Filename: filename,
 		Status:   "active",
-	})
-	_ = d.srv.Events().InsertEvent(gid, "added", "")
+	}); err != nil {
+		log.Printf("[Download] 记录下载任务失败(GID=%s): %v", gid, err)
+	}
+	if err := d.srv.Events().InsertEvent(gid, "added", ""); err != nil {
+		log.Printf("[Download] 记录事件失败(GID=%s): %v", gid, err)
+	}
 }
 
 // deleteDownloadRecord 删除下载记录
