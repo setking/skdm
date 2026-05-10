@@ -41,19 +41,38 @@ func (s *settings) GetSetting(key string) (string, error) {
 
 // ==================== 类型化的设置存取 ====================
 
-// SaveSettings 将 Settings 结构体保存到 SQLite
+// SaveSettings 将 Settings 结构体保存到 SQLite（事务保证原子性）
 func (s *settings) SaveSettings(st *dv1.Settings) error {
-	_ = s.SetSetting("default_download_dir", st.DefaultDownloadDir)
-	_ = s.SetSetting("max_concurrent_downloads", strconv.Itoa(st.MaxConcurrentDownloads))
-	_ = s.SetSetting("max_connection_per_server", strconv.Itoa(st.MaxConnectionPerServer))
-	_ = s.SetSetting("split", strconv.Itoa(st.Split))
-	_ = s.SetSetting("max_download_limit", strconv.FormatInt(st.MaxDownloadLimit, 10))
-	_ = s.SetSetting("continue_download", strconv.FormatBool(st.Continue))
-	_ = s.SetSetting("allow_overwrite", strconv.FormatBool(st.AllowOverwrite))
-	_ = s.SetSetting("auto_file_renaming", strconv.FormatBool(st.AutoFileRenaming))
-	_ = s.SetSetting("auto_check_update", strconv.FormatBool(st.AutoCheckUpdate))
-	_ = s.SetSetting("auto_start_unfinished", strconv.FormatBool(st.AutoStartUnfinished))
-	return nil
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("开启数据库事务失败: %w", err)
+	}
+	defer tx.Rollback()
+
+	pairs := []struct{ key, value string }{
+		{"default_download_dir", st.DefaultDownloadDir},
+		{"max_concurrent_downloads", strconv.Itoa(st.MaxConcurrentDownloads)},
+		{"max_connection_per_server", strconv.Itoa(st.MaxConnectionPerServer)},
+		{"split", strconv.Itoa(st.Split)},
+		{"max_download_limit", strconv.FormatInt(st.MaxDownloadLimit, 10)},
+		{"continue_download", strconv.FormatBool(st.Continue)},
+		{"allow_overwrite", strconv.FormatBool(st.AllowOverwrite)},
+		{"auto_file_renaming", strconv.FormatBool(st.AutoFileRenaming)},
+		{"auto_check_update", strconv.FormatBool(st.AutoCheckUpdate)},
+		{"auto_start_unfinished", strconv.FormatBool(st.AutoStartUnfinished)},
+	}
+
+	for _, p := range pairs {
+		if _, err := tx.Exec(
+			`INSERT INTO settings (key, value) VALUES (?, ?)
+			 ON CONFLICT(key) DO UPDATE SET value=excluded.value`,
+			p.key, p.value,
+		); err != nil {
+			return fmt.Errorf("保存设置项 %s 失败: %w", p.key, err)
+		}
+	}
+
+	return tx.Commit()
 }
 
 // GetSettings 从 SQLite 读取设置，未设置的键使用默认值
