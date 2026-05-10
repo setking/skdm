@@ -8,15 +8,20 @@ import { Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as store$0 from "../../../../../changeme/backed/pkg/store/models.js";
+import * as v1$0 from "../../../../../changeme/backed/api/apiserver/v1/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as sys$0 from "../../../../../changeme/backed/internal/apiserver/controller/v1/sys/models.js";
 
 function configure() {
     Object.freeze(Object.assign($Create.Events, {
         "download-update": $$createType0,
+        "update-check": $$createType1,
     }));
 }
 
 // Private type creation functions
-const $$createType0 = store$0.DownloadRecord.createFrom;
+const $$createType0 = v1$0.DownloadRecord.createFrom;
+const $$createType1 = sys$0.UpdateCheckResult.createFrom;
 
 configure();

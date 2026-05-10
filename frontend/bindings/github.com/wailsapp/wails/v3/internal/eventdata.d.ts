@@ -7,15 +7,19 @@ import type { Events } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import type * as store$0 from "../../../../../changeme/backed/pkg/store/models.js";
+import type * as v1$0 from "../../../../../changeme/backed/api/apiserver/v1/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import type * as sys$0 from "../../../../../changeme/backed/internal/apiserver/controller/v1/sys/models.js";
 
 declare module "@wailsio/runtime" {
     namespace Events {
         interface CustomEvents {
             "download-removed": string;
-            "download-update": store$0.DownloadRecord;
+            "download-update": v1$0.DownloadRecord;
             "time": string;
             "tray-new-task": string;
+            "update-check": sys$0.UpdateCheckResult;
         }
     }
 }

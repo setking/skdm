@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import {
   NForm, NFormItem, NInput, NInputNumber, NSwitch, NButton,
   NCard, NSpin, NTag, useMessage
 } from 'naive-ui'
 import { Dialogs } from '@wailsio/runtime'
-import { GetSettings, SaveSettings, CheckForUpdate, GetAppVersion } from '@bindings/changeme/backed/api/apiserver/aria2service'
-import type { Settings } from '@bindings/changeme/backed/pkg/store/models'
-import {FolderOpenOutline} from "@vicons/ionicons5";
+import { GetSettings, SaveSettings, GetAppVersion } from '@bindings/changeme/backed/internal/pkg/server/config'
+import type { Settings } from '@bindings/changeme/backed/api/apiserver/v1'
+import { useUpdateStore } from '@/stores/update'
+import { FolderOpenOutline } from "@vicons/ionicons5";
 
 const message = useMessage()
+const updateStore = useUpdateStore()
 const loading = ref(false)
 const saving = ref(false)
-const checkingUpdate = ref(false)
 const appVersion = ref('')
 
 const form = ref<Settings>({
@@ -76,29 +77,34 @@ async function handleSave() {
   }
 }
 
+/** 手动检查更新（用户点击按钮触发） */
 async function handleCheckUpdate() {
-  checkingUpdate.value = true
-  try {
-    const result = await CheckForUpdate()
-    if (result.error) {
-      message.error('检查更新失败: ' + result.error)
-    } else if (result.has_update) {
-      message.info(`发现新版本 v${result.latest_version}，当前版本 v${result.current_version}`, { duration: 8000 })
-    } else {
-      message.success('已是最新版本')
-    }
-  } catch (e: any) {
-    message.error('检查更新失败: ' + (e?.message || e))
-  } finally {
-    checkingUpdate.value = false
+  await updateStore.manualCheck()
+  showUpdateResult()
+}
+
+/** 根据缓存的更新检查结果显示提示 */
+function showUpdateResult() {
+  const r = updateStore.result
+  if (!r) return
+  if (r.error) {
+    message.error('检查更新失败: ' + r.error)
+  } else if (r.has_update) {
+    message.info(`发现新版本 v${r.latest_version}，当前版本 v${r.current_version}`, { duration: 8000 })
+  } else {
+    message.success('已是最新版本')
   }
 }
 
+// 监听后端启动时自动发送的更新检查结果
+watch(() => updateStore.result, (r) => {
+  if (r && form.value.auto_check_update) {
+    showUpdateResult()
+  }
+})
+
 onMounted(async () => {
   await loadSettings()
-  if (form.value.auto_check_update) {
-    handleCheckUpdate()
-  }
 })
 </script>
 
@@ -146,7 +152,7 @@ onMounted(async () => {
             </n-form-item>
             <n-form-item label="启动时自动开始任务">
               <n-switch v-model:value="form.auto_start_unfinished" />
-              <span class="hint">关闭后启动时所有任务暂停，需手动恢复</span>
+              <span class="hint">应用启动时所有任务暂停</span>
             </n-form-item>
           </n-card>
 
@@ -180,7 +186,7 @@ onMounted(async () => {
               <span class="hint">启动时自动检查是否有新版本</span>
             </n-form-item>
             <n-form-item label="手动检查">
-              <n-button size="small" :loading="checkingUpdate" @click="handleCheckUpdate">检查更新</n-button>
+              <n-button size="small" :loading="updateStore.checking" @click="handleCheckUpdate">检查更新</n-button>
             </n-form-item>
           </n-card>
 
@@ -200,6 +206,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
 }
+
 .page-header {
   display: flex;
   align-items: center;
@@ -207,16 +214,19 @@ onMounted(async () => {
   flex-shrink: 0;
   margin-bottom: 12px;
 }
+
 .page-title {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
 }
+
 .settings-area {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
 }
+
 .hint {
   margin-left: 8px;
   font-size: 12px;

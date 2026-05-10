@@ -1,8 +1,8 @@
 import { ref, reactive, computed, onUnmounted } from 'vue'
 import { defineStore } from 'pinia'
 import { Events } from '@wailsio/runtime'
-import type { DownloadRecord } from '@bindings/changeme/backed/pkg/store/models'
-import { ListDownloads } from '@bindings/changeme/backed/api/apiserver/aria2service'
+import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
+import { ListDownloads } from '@bindings/changeme/backed/internal/pkg/server/config'
 
 export const useDownloadStore = defineStore('downloads', () => {
   // 核心数据：以 gid 为 key 的下载记录表
@@ -91,7 +91,7 @@ export const useDownloadStore = defineStore('downloads', () => {
   // ==================== 事件处理 ====================
 
   function setupEventListeners() {
-    // 监听单条下载更新（来自 aria2 事件 + 进度轮询）
+    // 监听单条下载更新（来自 api 事件 + 进度轮询）
     unsubUpdate = Events.On('download-update', (ev: { data: DownloadRecord }) => {
       const dr = ev.data
       if (!dr || !dr.gid) return

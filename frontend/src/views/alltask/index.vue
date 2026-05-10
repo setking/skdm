@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { h, onMounted } from 'vue'
 import { NButton, NTag, NProgress, NSpace, useMessage } from 'naive-ui'
-import { Remove, DeleteDownloadRecord, ContinueDownload, RemoveDownloadResult } from '@bindings/changeme/backed/api/apiserver/aria2service'
-import type { DownloadRecord } from '@bindings/changeme/backed/pkg/store/models'
+import { Remove, DeleteDownloadRecord, ContinueDownload, RemoveDownloadResult } from '@bindings/changeme/backed/internal/pkg/server/config'
+import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
 import { useDownloadStore } from '@/stores/download'
 
 const message = useMessage()

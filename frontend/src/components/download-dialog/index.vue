@@ -3,10 +3,10 @@ import { ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { DownloadOutline, FolderOpenOutline, LinkOutline } from '@vicons/ionicons5'
 import { Dialogs } from '@wailsio/runtime'
-import { AddURI, GetDefaultDownloadDir, FindDownloadByURL, DeleteDownloadRecord } from '@bindings/changeme/backed/api/apiserver/aria2service'
-import type { DownloadRecord } from '@bindings/changeme/backed/pkg/store/models'
+import { AddURI, GetDefaultDownloadDir, FindDownloadByURL, DeleteDownloadRecord } from '@bindings/changeme/backed/internal/pkg/server/config'
+import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
 import type { CancellablePromiseLike } from '@wailsio/runtime'
-import { Options } from '@bindings/github.com/siku2/arigo/models'
+import { Options } from '@bindings/github.com/siku2/arigo'
 
 const props = defineProps<{
   show: boolean
@@ -115,7 +115,7 @@ function parseDownloadError(err: unknown): string {
   const msg: string = (err as { message?: string; toString?: () => string })?.message || (err as { toString?: () => string })?.toString?.() || ''
   if (!msg) return '未知错误，请检查网络连接'
 
-  // aria2 RPC 返回的错误消息
+  // api RPC 返回的错误消息
   if (msg.includes('No URI') || msg.includes('no uri') || msg.includes('no URI')) {
     return '无法连接到下载链接，请检查链接是否有效或远程服务器是否可用'
   }

@@ -1,14 +1,12 @@
 package main
 
 import (
+	"changeme/backed/cmd/apiserver"
 	"embed"
 	"log"
-	"os"
-	"path/filepath"
 	"time"
 
-	"changeme/backed/api/apiserver"
-	"changeme/backed/pkg/store"
+	dv1 "changeme/backed/api/apiserver/v1"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -33,7 +31,7 @@ func init() {
 	// Register custom events for download status/progress updates.
 	// "download-update" carries a full DownloadRecord for incremental UI sync.
 	// "download-removed" carries the GID string of a removed download.
-	application.RegisterEvent[store.DownloadRecord]("download-update")
+	application.RegisterEvent[dv1.DownloadRecord]("download-update")
 	application.RegisterEvent[string]("download-removed")
 
 	// "tray-new-task" is emitted when the user clicks "新建任务" in the tray menu.
@@ -55,14 +53,14 @@ func openDownloadPopup(app *application.App) {
 		return
 	}
 	popup := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:                      popupName,
-		Title:                     "新建下载任务",
-		Width:                     600,
-		Height:                    450,
-		URL:                       "/#/tray-task",
-		Frameless:                 true,
-		DisableResize:             true,
-		BackgroundColour:          application.NewRGB(27, 38, 54),
+		Name:                       popupName,
+		Title:                      "新建下载任务",
+		Width:                      600,
+		Height:                     450,
+		URL:                        "/#/tray-task",
+		Frameless:                  true,
+		DisableResize:              true,
+		BackgroundColour:           application.NewRGB(27, 38, 54),
 		DefaultContextMenuDisabled: true,
 	})
 	popup.Center()
@@ -77,14 +75,12 @@ func main() {
 	// 'Assets' configures the asset server with the 'FS' variable pointing to the frontend files.
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
-	cacheDir, _ := os.UserCacheDir()
-	dbPath := filepath.Join(cacheDir, "skdm", "skdm.db")
 
 	app := application.New(application.Options{
 		Name:        "skdm",
 		Description: "skdm下载器",
 		Services: []application.Service{
-			application.NewService(apiserver.NewAria2Service(dbPath)),
+			application.NewService(apiserver.Start()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -114,9 +110,9 @@ func main() {
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
-		BackgroundColour:          application.NewRGB(27, 38, 54),
+		BackgroundColour:           application.NewRGB(27, 38, 54),
 		DefaultContextMenuDisabled: true,
-		URL:                       "/",
+		URL:                        "/",
 	})
 
 	// Intercept window close to hide instead of destroy.

@@ -18,29 +18,44 @@
 ┌─────────────────────────┼───────────────────────────────────────┐
 │                   Backend (Go)                                   │
 │  ┌──────────────────────┴──────────────────────────────────┐   │
-│  │  api/apiserver/Aria2Service  ← Wails Service 接口层      │   │
-│  │  暴露 ~50 个方法给前端调用                                  │   │
+│  │  internal/pkg/server/Config  ← Wails Service 桥接层      │   │
+│  │  暴露 ~20 个方法给前端，委托到 GenericARIA2Server          │   │
 │  └──────────────────────────┬───────────────────────────────┘   │
-│                             │ 委托                              │
+│                             │                                    │
 │  ┌──────────────────────────┴───────────────────────────────┐   │
-│  │  pkg/aria2/Aria2Service  ← 核心引擎层                      │   │
-│  │  - aria2c 进程生命周期管理                                  │   │
-│  │  - WebSocket RPC 客户端 (arigo)                           │   │
-│  │  - 事件订阅 + 定时轮询 → SQLite 持久化（状态变更）           │   │
-│  │  - 进度更新直接推送前端（Wails Events，不写 SQLite）          │   │
-│  └──────────┬────────────────────┬──────────────────────────┘   │
-│             │                    │                              │
-│  ┌──────────┴──────┐  ┌─────────┴──────────┐                  │
-│  │  pkg/store/     │  │  RPC (WebSocket)   │                  │
-│  │  SQLite 持久化   │  │  localhost:6800    │                  │
-│  └─────────────────┘  └─────────┬──────────┘                  │
-└─────────────────────────────────┼───────────────────────────────┘
-                                  │
-┌─────────────────────────────────┴───────────────────────────────┐
-│                    aria2c (独立进程)                              │
-│  HTTP / FTP / BitTorrent / Magnet 多协议下载                     │
-│  JSON-RPC 接口，通过 WebSocket 通信                               │
-└─────────────────────────────────────────────────────────────────┘
+│  │  internal/pkg/server/GenericARIA2Server  ← 核心引擎层     │   │
+│  │  - aria2c 进程生命周期管理（启动/监控/重启）                 │   │
+│  │  - WebSocket RPC 连接管理 (arigo)                         │   │
+│  │  - 事件订阅 + 状态轮询 + 前端推送                           │   │
+│  └───────┬──────────────────────────────┬───────────────────┘   │
+│          │ 注入 Aria2ClientProvider      │ 注入 store.Factory   │
+│  ┌───────┴──────────────────────────────┴───────────────────┐   │
+│  │         internal/apiserver/controller/v1/  ← Controller 层│   │
+│  │  ┌──────────┐ ┌────────┐ ┌──────────┐ ┌───────────────┐ │   │
+│  │  │ Download │ │ Event  │ │ Settings │ │     Sys       │ │   │
+│  │  │Controller│ │Control.│ │Controller│ │  Controller   │ │   │
+│  │  └────┬─────┘ └───┬────┘ └────┬─────┘ └───────┬───────┘ │   │
+│  └───────┼───────────┼───────────┼─────────────────┼─────────┘   │
+│          │           │           │                 │              │
+│  ┌───────┴───────────┴───────────┴─────────────────┴─────────┐   │
+│  │     internal/apiserver/service/v1/  ← Service 层（透传）    │   │
+│  └────────────────────────┬──────────────────────────────────┘   │
+│                           │                                      │
+│  ┌────────────────────────┴──────────────────────────────────┐   │
+│  │     internal/apiserver/store/  ← Store 接口 + SQLite 实现  │   │
+│  │     SQLite (modernc.org/sqlite, 纯 Go, 无需 CGO)          │   │
+│  └────────────────────────────────────────────────────────────┘   │
+│                                                                   │
+│  ┌────────────────────────────────────────────────────────────┐   │
+│  │                RPC (WebSocket) localhost:6800               │   │
+│  └────────────────────────┬───────────────────────────────────┘   │
+└────────────────────────────┼──────────────────────────────────────┘
+                             │
+┌────────────────────────────┴──────────────────────────────────────┐
+│                    aria2c (独立进程)                               │
+│  HTTP / FTP / BitTorrent / Magnet 多协议下载                      │
+│  JSON-RPC 接口，通过 WebSocket 通信                                │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
 ### 架构分层
@@ -49,22 +64,29 @@
 |---|------|------|
 | **UI 层** | Vue 3 + Naive UI + UnoCSS | 界面渲染、用户交互、窗口控制 |
 | **绑定层** | `@wailsio/runtime` (自动生成) | 前后端 IPC 通信，类型安全的方法调用 |
-| **服务接口层** | `api/apiserver` (Go) | Wails Service 实现，暴露 ~50 个方法给前端 |
-| **核心引擎层** | `pkg/aria2` (Go) | aria2c 进程管理、WebSocket RPC 连接、事件订阅、状态轮询 |
-| **持久化层** | `pkg/store` (Go + SQLite) | 下载记录、事件日志、用户设置持久化 |
+| **桥接层** | `internal/pkg/server/Config` (Go) | Wails Service 实现，委托到 GenericARIA2Server，nil-safety 守卫 |
+| **核心引擎层** | `internal/pkg/server/GenericARIA2Server` (Go) | aria2c 进程管理、WebSocket RPC 连接、事件订阅、状态轮询 |
+| **控制器层** | `internal/apiserver/controller/v1/` (Go) | 业务逻辑编排，RPC 调用 + 数据库读写 + 前端事件推送 |
+| **服务层** | `internal/apiserver/service/v1/` (Go) | Store 接口透传（薄层） |
+| **持久化层** | `internal/apiserver/store/` + `pkg/db/` (Go + SQLite) | 下载记录、事件日志、用户设置持久化，启动自动建表 |
 | **下载引擎** | aria2c (C++) | 实际下载执行，支持多协议、多线程 |
 
 ### 数据流
 
 ```
-用户操作 → Vue 组件 → Wails Binding (JS) → IPC → Go Service → arigo RPC Client → WebSocket → aria2c
+用户操作 → Vue 组件 → Wails Binding (JS) → IPC → Config 桥接 → GenericARIA2Server → Controller → Service → Store → SQLite
+                                                                        ↓
+                                                                  arigo RPC Client → WebSocket → aria2c
 
 主动推送（事件驱动）:
-  aria2c 状态变更 → Go 引擎 → SQLite 写入（持久化） → Wails Event → Pinia Store → UI 响应式更新
-  aria2c 进度更新 → Go 引擎（3s 轮询，不写 SQLite） → Wails Event → Pinia Store → UI 响应式更新
+  aria2c 状态变更 → GenericARIA2Server 事件回调 → Controller → SQLite 写入（持久化） → Wails Event → Pinia Store → UI 响应式更新
+  aria2c 进度更新 → GenericARIA2Server 轮询（3s，不写 SQLite） → Wails Event → Pinia Store → UI 响应式更新
 
-兜底全量同步（30s 间隔）:
-  Go 引擎 → aria2 全量拉取 → SQLite 同步 + Wails Event 全量推送
+全量兜底同步（60s 间隔）:
+  GenericARIA2Server → aria2 全量拉取 → Controller → SQLite 同步 + Wails Event 全量推送
+
+自动更新检查（启动时执行一次）:
+  SysController.CheckForUpdateOnStartup() → GitHub API → Wails Event("update-check") → Pinia updateStore → 设置页面展示
 ```
 
 ## 功能
@@ -153,21 +175,40 @@ skdm/
 ├── Taskfile.yml                     # 顶层构建任务定义
 │
 ├── backed/                          # Go 后端
-│   ├── api/
-│   │   └── apiserver/app.go         # Wails Service（接口层，~50 个方法）
+│   ├── cmd/
+│   │   └── apiserver/app.go         # Wails Service 启动入口
+│   ├── api/apiserver/v1/            # API 类型定义（DownloadRecord, Settings, EventRecord 等）
+│   ├── internal/
+│   │   ├── apiserver/
+│   │   │   ├── app.go               # 应用初始化：SQLite + ARIA2 Server + PrepareRun
+│   │   │   ├── server.go            # 服务器编排（7 步启动流程）
+│   │   │   ├── router.go            # 依赖注入：创建 Controller 实例并注入 Store + RPC
+│   │   │   ├── run.go               # Wails 启动钩子
+│   │   │   ├── config/config.go     # 配置加载（viper + yaml）
+│   │   │   ├── options/options.go   # 命令行选项
+│   │   │   ├── controller/v1/       # Controller 层 — 业务逻辑编排
+│   │   │   │   ├── aria2_client.go  # Aria2ClientProvider 接口定义
+│   │   │   │   ├── download/        # 下载方法（AddURI, Pause, TellStatus 等 30+ 个）
+│   │   │   │   ├── event/           # 事件查询
+│   │   │   │   ├── settings/        # 设置读写 + aria2 全局选项同步
+│   │   │   │   └── sys/             # 系统方法（版本、更新检查、全局统计）
+│   │   │   ├── service/v1/          # Service 层 — Store 接口透传
+│   │   │   └── store/               # Store 接口 + SQLite 实现
+│   │   │       ├── store.go         # Factory 接口 + 全局单例
+│   │   │       └── sqlite/          # SQLite 实现（download/event/settings CRUD）
+│   │   └── pkg/
+│   │       ├── server/
+│   │       │   ├── GenericARIA2Server.go  # aria2c 进程管理 + RPC 重连 + 事件轮询
+│   │       │   └── config.go              # Wails Service 桥接（Config 委托 + nil-safety）
+│   │       └── options/
+│   │           └── server_run_options.go  # 服务器运行选项
 │   ├── pkg/
-│   │   ├── aria2/
-│   │   │   ├── aria2.go             # aria2c 进程管理、事件订阅、状态轮询、DB 同步
-│   │   │   ├── api.go               # RPC 方法封装（AddURI, Pause, TellStatus 等）
-│   │   │   └── third_party/
-│   │   │       ├── aria2c.exe       # 嵌入的 aria2 可执行文件
-│   │   │       └── aria2.conf       # aria2 配置文件
-│   │   └── store/
-│   │       ├── store.go             # SQLite 数据库初始化、表迁移
-│   │       ├── models.go            # 数据模型（DownloadRecord, Settings, EventRecord）
-│   │       ├── download.go          # 下载记录 CRUD
-│   │       ├── settings.go          # 设置读写（key-value + 类型化存取）
-│   │       └── event.go             # 事件日志
+│   │   ├── db/
+│   │   │   └── sqlite.go           # SQLite 数据库初始化（modernc.org/sqlite）+ 自动建表
+│   │   └── version/
+│   │       └── version.go           # 版本号常量
+│   ├── configs/apiserver.yaml       # 默认配置文件
+│   └── third_party/                 # aria2c 可执行文件 + 配置
 │
 ├── frontend/                        # Vue 前端
 │   ├── src/
@@ -180,13 +221,14 @@ skdm/
 │   │   │   ├── menu/index.vue       # 侧边导航菜单（RouterLink + ionicons）
 │   │   │   └── download-dialog/     # 新建下载任务对话框
 │   │   ├── stores/
-│   │   │   └── download.ts           # Pinia Store（事件驱动的下载状态管理）
+│   │   │   ├── download.ts          # Pinia Store（事件驱动的下载状态管理）
+│   │   │   └── update.ts            # Pinia Store（自动更新检查结果缓存）
 │   │   ├── views/
 │   │   │   ├── runtask/             # 下载中（active/waiting/paused）
 │   │   │   ├── alltask/             # 未完成（error/paused，可恢复/重试/删除）
 │   │   │   ├── completetask/        # 已完成
 │   │   │   ├── trashtask/           # 回收站（可清空/恢复/永久删除）
-│   │   │   ├── tray-task/            # 托盘新建任务独立弹窗页面
+│   │   │   ├── tray-task/           # 托盘新建任务独立弹窗页面
 │   │   │   ├── settings/            # 设置（下载目录、连接、限速等）
 │   │   │   └── error/               # 403 / 404 错误页
 │   │   └── assets/                  # 样式、字体等
@@ -278,16 +320,20 @@ pnpm lint         # 代码检查
 ### RPC 通信
 
 - aria2c 监听 `localhost:6800`，WebSocket 端点 `/jsonrpc`
-- RPC Secret 硬编码为 `my-strong-secret-token-2026`
+- RPC Secret 配置为 `my-strong-secret-token-2026`（后续版本将支持自定义）
 - Go 端使用 `github.com/siku2/arigo` 库封装 RPC 调用
-- 前端通过 Wails 自动生成的 binding 调用，不直接连接 aria2
+- `GenericARIA2Server` 持有 `arigo.Client` 并暴露 `Client()` 方法供 Controller 调用
+- Controller 通过 `Aria2ClientProvider` 接口获取 RPC 客户端，实现松耦合
+- 前端通过 Wails 自动生成的 binding → Config 桥接 → GenericARIA2Server → Controller → arigo RPC，不直接连接 aria2
 
 ### 添加新的下载操作方法
 
-1. 在 `backed/pkg/aria2/api.go` 中添加 RPC 方法实现
-2. 在 `backed/api/apiserver/app.go` 中添加 Wails Service 包装方法
-3. 重新运行 `wails3 dev` 或 `wails3 generate bindings` 更新前端 binding
-4. 在前端组件中导入生成的 binding 函数调用
+1. 在 `backed/internal/apiserver/controller/v1/download/download.go` 的 `DownloadController` 中添加业务方法
+2. 业务方法通过 `d.rpc.Client()` 调用 aria2 RPC，通过 `d.srv.xxx()` 操作数据库
+3. 在 `backed/internal/pkg/server/GenericARIA2Server.go` 中添加对外暴露的包装方法
+4. 在 `backed/internal/pkg/server/config.go` 中添加 Config 桥接方法（含 nil-safety 守卫）
+5. 重新运行 `wails3 dev` 或 `wails3 generate bindings` 更新前端 binding
+6. 在前端组件中导入生成的 binding 函数调用
 
 ### 无边框窗口与系统托盘
 
