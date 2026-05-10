@@ -1,0 +1,7 @@
+aria2:
+  rpc_port: 6800
+  rpc_secret: 'your_rpc_secret'
+  session_path: './app.db'
+  endpoint: "ws://localhost"
+sqlite:
+  database_path: 'data/app.db'

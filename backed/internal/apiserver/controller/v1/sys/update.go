@@ -1,4 +1,4 @@
-package v1
+package sys
 
 import (
 	"encoding/json"
@@ -8,7 +8,13 @@ import (
 	"time"
 
 	"changeme/backed/pkg/version"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
+
+func init() {
+	application.RegisterEvent[UpdateCheckResult]("update-check")
+}
 
 type UpdateSrv interface {
 }
