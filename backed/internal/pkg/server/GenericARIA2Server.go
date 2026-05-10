@@ -17,6 +17,7 @@ import (
 	"changeme/backed/internal/apiserver/controller/v1/event"
 	"changeme/backed/internal/apiserver/controller/v1/settings"
 	"changeme/backed/internal/apiserver/controller/v1/sys"
+	"changeme/backed/pkg/db"
 	thirdparty "changeme/backed/third_party"
 
 	"github.com/siku2/arigo"
@@ -68,6 +69,9 @@ func (g *GenericARIA2Server) SetControllers(
 func (g *GenericARIA2Server) ServiceStartup() error {
 	activeServer = g
 
+	// 确保 session 文件目录可写；若不可写（如安装到系统目录），回退到用户数据目录
+	g.sessionPath = ensureSessionWritable(g.sessionPath)
+
 	aria2cPath, err := thirdparty.ReadAndWriteForAria2c()
 	if err != nil {
 		return fmt.Errorf("准备 aria2c 可执行文件失败: %s\n", err.Error())
@@ -106,6 +110,29 @@ func (g *GenericARIA2Server) ServiceStartup() error {
 
 	go g.monitorAria2Process()
 	return nil
+}
+
+// ensureSessionWritable 检测 sessionPath 所在目录是否可写。
+// 若不可写（如安装到系统保护目录），回退到用户数据目录下的 api.session。
+func ensureSessionWritable(sessionPath string) string {
+	dir := filepath.Dir(sessionPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fallbackSessionPath(sessionPath)
+	}
+	testFile := filepath.Join(dir, ".skdm_write_test")
+	f, err := os.Create(testFile)
+	if err != nil {
+		return fallbackSessionPath(sessionPath)
+	}
+	f.Close()
+	os.Remove(testFile)
+	return sessionPath
+}
+
+func fallbackSessionPath(originalPath string) string {
+	fallback := filepath.Join(db.UserDataDir(), "api.session")
+	log.Printf("[Aria2Service] session 目录不可写 (%s)，回退到 %s", filepath.Dir(originalPath), fallback)
+	return fallback
 }
 
 // ServiceShutdown 在应用关闭时自动调用，终止 aria2c 进程

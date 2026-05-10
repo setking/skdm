@@ -53,8 +53,10 @@ ManifestDPIAware true
 !define MUI_FINISHPAGE_NOAUTOCLOSE # Wait on the INSTFILES page so the user can take a look into the details of the installation steps
 !define MUI_ABORTWARNING # This will warn the user if they exit from the installer.
 
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfElevated
 !insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
 # !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
+!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfElevated
 !insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
 !insertmacro MUI_PAGE_INSTFILES # Installing page.
 !insertmacro MUI_PAGE_FINISH # Finished installation page.
@@ -72,8 +74,65 @@ OutFile "..\..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the i
 InstallDir "$LOCALAPPDATA\Programs\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" # 用户级安装到 %LOCALAPPDATA%\Programs，无需管理员权限
 ShowInstDetails show # This will always show the installation details.
 
+Var IsElevated
+Var SkipPages
+
 Function .onInit
-   !insertmacro wails.checkArchitecture
+    !insertmacro wails.checkArchitecture
+
+    ; 检查是否是提权后重新启动的实例（携带 /ELEVATED 参数）
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "/ELEVATED" $R1
+    ${IfNot} ${Errors}
+        StrCpy $IsElevated "1"
+        ; 从临时注册表恢复用户选择的安装目录
+        ReadRegStr $INSTDIR HKCU "Software\${INFO_COMPANYNAME}\InstallerTemp" "InstallDir"
+        DeleteRegKey HKCU "Software\${INFO_COMPANYNAME}\InstallerTemp"
+    ${Else}
+        ; 非提权实例：尝试从上次安装记录恢复安装目录
+        SetRegView 64
+        ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "UninstallString"
+        ${If} $0 != ""
+            ${GetParent} $0 $INSTDIR
+        ${EndIf}
+    ${EndIf}
+FunctionEnd
+
+## 提权模式下跳过欢迎页和目录选择页，直接进入安装。
+Function SkipIfElevated
+    ${If} $IsElevated == "1"
+        Abort
+    ${EndIf}
+FunctionEnd
+
+## 校验用户选择的安装目录是否可写。
+## 如果目录需要管理员权限，询问用户是否以管理员身份重新启动安装程序。
+Function .onVerifyInstDir
+    CreateDirectory "$INSTDIR"
+    ClearErrors
+    FileOpen $0 "$INSTDIR\.skdm_install_test" w
+    IfErrors cant_write can_write
+
+    cant_write:
+        MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
+            "所选目录需要管理员权限才能写入。$\n$\n是否以管理员身份重新启动安装程序？$\n$\n选「否」返回目录选择页面，请选择其他目录。" \
+            IDYES request_elevation IDNO stay
+
+    request_elevation:
+        ; 将用户选择的目录写入临时注册表，供提权后的实例读取
+        SetRegView 64
+        WriteRegStr HKCU "Software\${INFO_COMPANYNAME}\InstallerTemp" "InstallDir" "$INSTDIR"
+        ; 以 runas 动词重新启动自己（触发 UAC 提权）
+        ShellExecute "open" "$EXEPATH" "/ELEVATED" "" "runas"
+        ; 非提权实例直接退出
+        Quit
+
+    stay:
+        Abort
+
+    can_write:
+        FileClose $0
+        Delete "$INSTDIR\.skdm_install_test"
 FunctionEnd
 
 Section

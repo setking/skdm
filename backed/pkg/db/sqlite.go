@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +11,38 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "modernc.org/sqlite"
 )
+
+// UserDataDir 返回用户级数据目录。
+// Windows: %LOCALAPPDATA%\SKDM
+// macOS:   ~/Library/Application Support/SKDM
+// Linux:   ~/.local/share/SKDM
+func UserDataDir() string {
+	var base string
+	if runtime.GOOS == "windows" {
+		base = os.Getenv("LOCALAPPDATA")
+		if base == "" {
+			base = os.Getenv("APPDATA")
+		}
+		if base == "" {
+			home, _ := os.UserHomeDir()
+			base = filepath.Join(home, "AppData", "Local")
+		}
+	} else {
+		base = os.Getenv("XDG_DATA_HOME")
+		if base == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				home = "."
+			}
+			if runtime.GOOS == "darwin" {
+				base = filepath.Join(home, "Library", "Application Support")
+			} else {
+				base = filepath.Join(home, ".local", "share")
+			}
+		}
+	}
+	return filepath.Join(base, "SKDM")
+}
 
 type Options struct {
 	// SQLite 使用文件路径
@@ -27,7 +60,14 @@ func New(opts *Options) (*sqlx.DB, error) {
 	if dbPath != ":memory:" && dbPath != "" {
 		dbPath = resolveDBPath(dbPath)
 		if err := ensureWritable(dbPath); err != nil {
-			return nil, err
+			// 如果指定路径不可写（例如安装到受保护的系统目录），
+			// 自动回退到用户级数据目录，避免程序无法运行。
+			fallbackPath := filepath.Join(UserDataDir(), filepath.Base(dbPath))
+			log.Printf("[DB] 数据库目录不可写 (%v)，回退到 %s", err, fallbackPath)
+			dbPath = fallbackPath
+			if err := ensureWritable(dbPath); err != nil {
+				return nil, fmt.Errorf("数据库回退目录也不可写 (%s): %w", dbPath, err)
+			}
 		}
 	}
 
