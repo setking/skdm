@@ -122,8 +122,8 @@ Function .onVerifyInstDir
         ; 将用户选择的目录写入临时注册表，供提权后的实例读取
         SetRegView 64
         WriteRegStr HKCU "Software\${INFO_COMPANYNAME}\InstallerTemp" "InstallDir" "$INSTDIR"
-        ; 以 runas 动词重新启动自己（触发 UAC 提权）
-        ShellExecute "open" "$EXEPATH" "/ELEVATED" "" "runas"
+        ; 通过 ShellExecuteW + "runas" 触发 UAC 提权重启
+        System::Call 'shell32::ShellExecuteW(i $HWNDPARENT, w "runas", w "$EXEPATH", w "/ELEVATED", w "$EXEDIR", i 1) i.r0'
         ; 非提权实例直接退出
         Quit
 
