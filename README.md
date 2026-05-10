@@ -60,16 +60,16 @@
 
 ### 架构分层
 
-| 层 | 技术 | 职责 |
-|---|------|------|
-| **UI 层** | Vue 3 + Naive UI + UnoCSS | 界面渲染、用户交互、窗口控制 |
-| **绑定层** | `@wailsio/runtime` (自动生成) | 前后端 IPC 通信，类型安全的方法调用 |
-| **桥接层** | `internal/pkg/server/Config` (Go) | Wails Service 实现，委托到 GenericARIA2Server，nil-safety 守卫 |
-| **核心引擎层** | `internal/pkg/server/GenericARIA2Server` (Go) | aria2c 进程管理、WebSocket RPC 连接、事件订阅、状态轮询 |
-| **控制器层** | `internal/apiserver/controller/v1/` (Go) | 业务逻辑编排，RPC 调用 + 数据库读写 + 前端事件推送 |
-| **服务层** | `internal/apiserver/service/v1/` (Go) | Store 接口透传（薄层） |
-| **持久化层** | `internal/apiserver/store/` + `pkg/db/` (Go + SQLite) | 下载记录、事件日志、用户设置持久化，启动自动建表 |
-| **下载引擎** | aria2c (C++) | 实际下载执行，支持多协议、多线程 |
+| 层             | 技术                                                  | 职责                                                           |
+| -------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
+| **UI 层**      | Vue 3 + Naive UI + UnoCSS                             | 界面渲染、用户交互、窗口控制                                   |
+| **绑定层**     | `@wailsio/runtime` (自动生成)                         | 前后端 IPC 通信，类型安全的方法调用                            |
+| **桥接层**     | `internal/pkg/server/Config` (Go)                     | Wails Service 实现，委托到 GenericARIA2Server，nil-safety 守卫 |
+| **核心引擎层** | `internal/pkg/server/GenericARIA2Server` (Go)         | aria2c 进程管理、WebSocket RPC 连接、事件订阅、状态轮询        |
+| **控制器层**   | `internal/apiserver/controller/v1/` (Go)              | 业务逻辑编排，RPC 调用 + 数据库读写 + 前端事件推送             |
+| **服务层**     | `internal/apiserver/service/v1/` (Go)                 | Store 接口透传（薄层）                                         |
+| **持久化层**   | `internal/apiserver/store/` + `pkg/db/` (Go + SQLite) | 下载记录、事件日志、用户设置持久化，启动自动建表               |
+| **下载引擎**   | aria2c (C++)                                          | 实际下载执行，支持多协议、多线程                               |
 
 ### 数据流
 
@@ -134,38 +134,38 @@
 
 ### 前端
 
-| 类别 | 选型 | 版本 |
-|------|------|------|
-| 框架 | Vue 3 (Composition API) | 3.5 |
-| 语言 | TypeScript | 6.0 |
-| 构建 | Vite | 8.0 |
-| UI 组件库 | Naive UI | 2.44 |
-| CSS 方案 | UnoCSS + Sass | 66.6 / 1.98 |
-| 路由 | Vue Router | 5.0 |
-| 状态管理 | Pinia | 3.0 |
-| 图标 | Vicons (Ionicons 5) | 0.13 |
-| 测试 | Vitest + jsdom | 4.1 |
-| 代码检查 | ESLint + Oxlint | 10.1 / 1.57 |
+| 类别      | 选型                    | 版本        |
+| --------- | ----------------------- | ----------- |
+| 框架      | Vue 3 (Composition API) | 3.5         |
+| 语言      | TypeScript              | 6.0         |
+| 构建      | Vite                    | 8.0         |
+| UI 组件库 | Naive UI                | 2.44        |
+| CSS 方案  | UnoCSS + Sass           | 66.6 / 1.98 |
+| 路由      | Vue Router              | 5.0         |
+| 状态管理  | Pinia                   | 3.0         |
+| 图标      | Vicons (Ionicons 5)     | 0.13        |
+| 测试      | Vitest + jsdom          | 4.1         |
+| 代码检查  | ESLint + Oxlint         | 10.1 / 1.57 |
 
 ### 后端
 
-| 类别 | 选型 | 版本 |
-|------|------|------|
-| 语言 | Go | 1.25 |
-| 桌面框架 | Wails v3 | 3.0.0-alpha.74 |
-| RPC 客户端 | arigo | 0.3.0 |
-| 数据库 | SQLite (modernc.org/sqlite) | 1.50 |
-| 下载引擎 | aria2c | 1.36+ |
-| 构建 | Task (Taskfile) | 3.x |
+| 类别       | 选型                        | 版本           |
+| ---------- | --------------------------- | -------------- |
+| 语言       | Go                          | 1.25           |
+| 桌面框架   | Wails v3                    | 3.0.0-alpha.74 |
+| RPC 客户端 | arigo                       | 0.3.0          |
+| 数据库     | SQLite (modernc.org/sqlite) | 1.50           |
+| 下载引擎   | aria2c                      | 1.36+          |
+| 构建       | Task (Taskfile)             | 3.x            |
 
 ### 平台支持
 
-| 平台 | 状态 | 打包方式 |
-|------|------|---------|
-| Windows | 原生构建 | NSIS / MSIX 安装包 |
-| macOS | 原生构建 | .app 包 |
-| Linux | 原生构建 | AppImage |
-| Docker | 跨平台编译 / 服务模式部署 | Docker 镜像 |
+| 平台    | 状态                      | 打包方式           |
+| ------- | ------------------------- | ------------------ |
+| Windows | 原生构建                  | NSIS / MSIX 安装包 |
+| macOS   | 原生构建                  | .app 包            |
+| Linux   | 原生构建                  | AppImage           |
+| Docker  | 跨平台编译 / 服务模式部署 | Docker 镜像        |
 
 ## 项目结构
 
@@ -300,11 +300,11 @@ pnpm lint         # 代码检查
 
 ### 表结构
 
-| 表 | 用途 |
-|----|------|
-| `downloads` | 下载任务记录（gid, url, dir, filename, 进度, 状态, 错误信息等） |
-| `download_events` | 下载事件日志（事件类型, 事件数据 JSON, 时间） |
-| `settings` | 用户设置（key-value 存储） |
+| 表                | 用途                                                            |
+| ----------------- | --------------------------------------------------------------- |
+| `downloads`       | 下载任务记录（gid, url, dir, filename, 进度, 状态, 错误信息等） |
+| `download_events` | 下载事件日志（事件类型, 事件数据 JSON, 时间）                   |
+| `settings`        | 用户设置（key-value 存储）                                      |
 
 ### 状态同步机制
 
@@ -312,7 +312,7 @@ pnpm lint         # 代码检查
 
 - **aria2 事件订阅**：监听 Start/Pause/Complete/Error/Stop 事件，状态变更时写入 SQLite 并通过 Wails Events 推送到前端
 - **进度轮询**：每 3 秒从 aria2 拉取活跃任务进度和速度，直接通过 Wails Events 推送到前端 Pinia Store（不写 SQLite，减少 ~90% 写入）
-- **全量兜底同步**：每 30 秒从 aria2 全量拉取，同步到 SQLite 并推送到前端
+- **全量兜底同步**：每 300 秒从 aria2 全量拉取，同步到 SQLite 并推送到前端
 - **启动同步**：应用启动时从 aria2 拉取所有任务状态，合并到 SQLite，初始化前端 Store
 
 ## 开发说明
