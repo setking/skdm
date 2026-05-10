@@ -6,10 +6,6 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as time$0 from "../../../../../time/models.js";
-
 /**
  * DownloadRecord 表示一条下载记录
  */
@@ -92,21 +88,21 @@ export class DownloadRecord {
         if (!("created_at" in $$source)) {
             /**
              * @member
-             * @type {time$0.Time}
+             * @type {string}
              */
-            this["created_at"] = null;
+            this["created_at"] = "";
         }
         if (!("updated_at" in $$source)) {
             /**
              * @member
-             * @type {time$0.Time}
+             * @type {string}
              */
-            this["updated_at"] = null;
+            this["updated_at"] = "";
         }
         if (/** @type {any} */(false)) {
             /**
              * @member
-             * @type {time$0.Time | null | undefined}
+             * @type {string | null | undefined}
              */
             this["completed_at"] = undefined;
         }

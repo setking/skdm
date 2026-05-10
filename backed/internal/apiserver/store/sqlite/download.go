@@ -19,7 +19,7 @@ func newDownload(ds *datastore) *download {
 
 // InsertDownload 创建新的下载记录
 func (d *download) InsertDownload(ctx context.Context, dw *dv1.DownloadRecord) error {
-	now := time.Now().UTC()
+	now := time.Now().UTC().Format(time.RFC3339)
 
 	dw.CreatedAt = now
 	dw.UpdatedAt = now
@@ -44,9 +44,9 @@ func (d *download) InsertDownload(ctx context.Context, dw *dv1.DownloadRecord) e
 // UpdateDownloadStatus 更新下载任务的状态、进度和错误信息
 func (d *download) UpdateDownloadStatus(gid, status string, completedLength, totalLength, downloadSpeed int64, errorCode int, errorMessage string) error {
 	now := time.Now().UTC().Format(time.RFC3339)
-	var completedAt interface{}
+	var completedAt *string
 	if status == "complete" {
-		completedAt = now
+		completedAt = &now
 	}
 	_, err := d.db.Exec(
 		`UPDATE downloads SET status=?, completed_length=?, total_length=?,
