@@ -115,7 +115,7 @@ Function .onVerifyInstDir
 
     cant_write:
         MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
-            "所选目录需要管理员权限才能写入。$\n$\n是否以管理员身份重新启动安装程序？$\n$\n选「否」返回目录选择页面，请选择其他目录。" \
+            "The selected directory requires administrator privileges to write to.$\n$\nWould you like to restart the installer with administrator privileges?$\n$\nSelect 'No' to return and choose a different directory." \
             IDYES request_elevation IDNO stay
 
     request_elevation:
