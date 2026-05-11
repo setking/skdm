@@ -19,7 +19,11 @@ import AppMain from "./main/index.vue"
           </n-message-provider>
         </div>
         <div class="main">
-          <AppMain/>
+          <n-message-provider>
+            <n-dialog-provider>
+              <AppMain/>
+            </n-dialog-provider>
+          </n-message-provider>
         </div>
       </div>
     </div>

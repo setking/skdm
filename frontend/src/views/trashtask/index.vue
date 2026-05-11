@@ -1,27 +1,30 @@
 <script setup lang="ts">
 import { h, onMounted } from 'vue'
-import { NButton, NTag, NSpace, useMessage } from 'naive-ui'
-import { DeleteDownloadRecord, PurgeDownloadResults, ContinueDownload, RemoveDownloadResult } from '@bindings/changeme/backed/internal/pkg/server/config'
+import { NButton, NTag, NSpace, useMessage, useDialog } from 'naive-ui'
+import { DeleteDownloadRecord, PurgeDownloadResults, ContinueDownload, RemoveDownloadResult, DeleteWithLocalFile } from '@bindings/changeme/backed/internal/pkg/server/config'
 import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
 import { useDownloadStore } from '@/stores/download'
+import { formatBytes } from '@/utils/format'
+import TablePage from '@/components/table/index.vue'
 
 const message = useMessage()
+const dialog = useDialog()
 const store = useDownloadStore()
 
-function formatBytes(bytes: number): string {
-  if (bytes <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let i = 0; let size = bytes
-  while (size >= 1024 && i < units.length - 1) { size /= 1024; i++ }
-  return size.toFixed(i > 0 ? 1 : 0) + ' ' + units[i]
-}
-
 async function handleDelete(gid: string) {
-  try {
-    await RemoveDownloadResult(gid).catch(() => {})
-    await DeleteDownloadRecord(gid)
-    message.success('已永久删除')
-  } catch (e: any) { message.error('删除失败: ' + e) }
+  dialog.warning({
+    title: '确认删除',
+    content: '此操作将同时删除本地下载文件，是否继续？',
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await RemoveDownloadResult(gid).catch(() => {})
+        await DeleteWithLocalFile(gid)
+        message.success('已永久删除')
+      } catch (e: any) { message.error('删除失败: ' + e) }
+    }
+  })
 }
 async function handleContinue(gid: string) {
   try {
@@ -30,27 +33,35 @@ async function handleContinue(gid: string) {
   } catch (e: any) { message.error('重新下载失败: ' + e) }
 }
 async function handlePurgeAll() {
-  try {
-    await PurgeDownloadResults()
-    const items = [...store.trashedDownloads]
-    for (const d of items) {
-      await DeleteDownloadRecord(d.gid).catch(() => {})
+  dialog.warning({
+    title: '确认清空',
+    content: '将清空回收站中所有记录（不删除本地文件），是否继续？',
+    positiveText: '确认清空',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await PurgeDownloadResults()
+        const items = [...store.trashedDownloads]
+        for (const d of items) {
+          await DeleteDownloadRecord(d.gid).catch(() => {})
+        }
+        message.success('已清空回收站')
+      } catch (e: any) { message.error('清空失败: ' + e) }
     }
-    message.success('已清空回收站')
-  } catch (e: any) { message.error('清空失败: ' + e) }
+  })
 }
 
 const columns = [
-  { title: '文件名', key: 'filename', ellipsis: { tooltip: true },
+  { title: '文件名', key: 'filename', ellipsis: { tooltip: true }, minWidth: 120,
     render(row: DownloadRecord) { return row.filename || row.url?.split('/').pop() || row.gid?.slice(0, 8) } },
-  { title: '大小', key: 'total_length', width: 100,
+  { title: '大小', key: 'total_length', minWidth: 80, width: 100,
     render(row: DownloadRecord) { return row.total_length > 0 ? formatBytes(row.total_length) : '未知' } },
-  { title: '删除时间', key: 'updated_at', width: 170, render(row: DownloadRecord) { return row.updated_at?.replace('T', ' ').slice(0, 19) || '-' } },
-  { title: '原链接', key: 'url', ellipsis: { tooltip: true } },
-  { title: '状态', key: 'status', width: 80,
+  { title: '删除时间', key: 'updated_at', minWidth: 130, width: 170, render(row: DownloadRecord) { return row.updated_at?.replace('T', ' ').slice(0, 19) || '-' } },
+  { title: '原链接', key: 'url', ellipsis: { tooltip: true }, minWidth: 120 },
+  { title: '状态', key: 'status', minWidth: 70, width: 80,
     render() { return h(NTag, { type: 'default', size: 'small' }, () => '已删除') }
   },
-  { title: '操作', key: 'actions', width: 170,
+  { title: '操作', key: 'actions', minWidth: 140, width: 170,
     render(row: DownloadRecord) {
       return h(NSpace, { size: 4 }, () => [
         h(NButton, { size: 'tiny', quaternary: true, type: 'primary', onClick: () => handleContinue(row.gid) }, () => '重新下载'),
@@ -66,26 +77,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <div class="page-header">
-      <h2 class="page-title">回收站</h2>
+  <TablePage
+    title="回收站"
+    :count="store.trashedDownloads.length"
+    empty-description="回收站为空"
+    :columns="columns"
+    :data="store.trashedDownloads"
+  >
+    <template #header-right>
       <n-space align="center">
-        <span class="count" v-if="store.trashedDownloads.length > 0">{{ store.trashedDownloads.length }} 个任务</span>
+        <span v-if="store.trashedDownloads.length > 0" class="count">{{ store.trashedDownloads.length }} 个任务</span>
         <n-button v-if="store.trashedDownloads.length > 0" size="small" type="error" quaternary @click="handlePurgeAll">清空回收站</n-button>
       </n-space>
-    </div>
-    <div class="table-area">
-      <n-empty v-if="store.trashedDownloads.length === 0" description="回收站为空" style="margin-top: 120px" />
-      <n-data-table v-else :columns="columns" :data="store.trashedDownloads" :bordered="false" striped size="small"
-        flex-height style="height: 100%" />
-    </div>
-  </div>
+    </template>
+  </TablePage>
 </template>
 
 <style scoped>
-.page { padding: 16px 24px; height: 100%; display: flex; flex-direction: column; }
-.page-header { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; margin-bottom: 12px; }
-.page-title { margin: 0; font-size: 18px; font-weight: 600; }
 .count { color: #999; font-size: 13px; }
-.table-area { flex: 1; min-height: 0; }
 </style>

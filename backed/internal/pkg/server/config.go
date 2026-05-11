@@ -159,6 +159,18 @@ func (c *Config) DeleteDownloadRecord(gid string) error {
 	}
 	return activeServer.DeleteDownloadRecord(gid)
 }
+func (c *Config) OpenFileLocation(gid string) error {
+	if activeServer == nil {
+		return errServerNotReady
+	}
+	return activeServer.OpenFileLocation(gid)
+}
+func (c *Config) DeleteWithLocalFile(gid string) error {
+	if activeServer == nil {
+		return errServerNotReady
+	}
+	return activeServer.DeleteWithLocalFile(gid)
+}
 func (c *Config) ContinueDownload(gid string) (arigo.GID, error) {
 	if activeServer == nil {
 		return arigo.GID{}, errServerNotReady

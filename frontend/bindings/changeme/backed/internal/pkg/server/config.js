@@ -68,6 +68,14 @@ export function DeleteDownloadRecord(gid) {
 }
 
 /**
+ * @param {string} gid
+ * @returns {$CancellablePromise<void>}
+ */
+export function DeleteWithLocalFile(gid) {
+    return $Call.ByID(1913806627, gid);
+}
+
+/**
  * @param {string} url
  * @returns {$CancellablePromise<v1$0.DownloadRecord | null>}
  */
@@ -111,6 +119,14 @@ export function ListDownloads(status, offset, limit) {
         $result[0] = $$createType8($result[0]);
         return $result;
     }));
+}
+
+/**
+ * @param {string} gid
+ * @returns {$CancellablePromise<void>}
+ */
+export function OpenFileLocation(gid) {
+    return $Call.ByID(157599664, gid);
 }
 
 /**

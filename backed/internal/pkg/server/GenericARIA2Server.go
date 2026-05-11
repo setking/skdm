@@ -293,6 +293,16 @@ func (g *GenericARIA2Server) DeleteDownloadRecord(gid string) error {
 	return g.downloadCtrl.Delete(gid)
 }
 
+// OpenFileLocation 在文件管理器中打开下载文件所在目录并选中该文件
+func (g *GenericARIA2Server) OpenFileLocation(gid string) error {
+	return g.downloadCtrl.OpenFileLocation(gid)
+}
+
+// DeleteWithLocalFile 删除数据库记录并同时删除本地下载文件
+func (g *GenericARIA2Server) DeleteWithLocalFile(gid string) error {
+	return g.downloadCtrl.DeleteWithLocalFile(gid)
+}
+
 // ContinueDownload 从历史记录恢复下载
 func (g *GenericARIA2Server) ContinueDownload(gid string) (arigo.GID, error) {
 	return g.downloadCtrl.ContinueDownload(gid)

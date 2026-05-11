@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     DownloadDialog: typeof import('./src/components/download-dialog/index.vue')['default']
+    Empty: typeof import('./src/components/table/empty/index.vue')['default']
     Footer: typeof import('./src/components/footer/index.vue')['default']
     Header: typeof import('./src/components/header/index.vue')['default']
     Menu: typeof import('./src/components/menu/index.vue')['default']
@@ -32,5 +33,6 @@ declare module 'vue' {
     NSpace: typeof import('naive-ui')['NSpace']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Table: typeof import('./src/components/table/index.vue')['default']
   }
 }

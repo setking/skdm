@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -679,6 +683,40 @@ func (d *DownloadController) deleteDownloadRecord(gid string) error {
 	}
 	d.pushDownloadRemoved(gid)
 	return nil
+}
+
+// OpenFileLocation 在文件管理器中打开下载文件所在目录并选中该文件
+func (d *DownloadController) OpenFileLocation(gid string) error {
+	record, err := d.srv.Downloads().GetDownload(gid)
+	if err != nil || record == nil {
+		return fmt.Errorf("未找到下载记录: %s", gid)
+	}
+	filePath := filepath.Join(record.Dir, record.Filename)
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", "/select,", filePath)
+	case "darwin":
+		cmd = exec.Command("open", "-R", filePath)
+	default:
+		cmd = exec.Command("xdg-open", record.Dir)
+	}
+	return cmd.Start()
+}
+
+// DeleteWithLocalFile 删除数据库记录并同时删除本地下载文件
+func (d *DownloadController) DeleteWithLocalFile(gid string) error {
+	record, err := d.srv.Downloads().GetDownload(gid)
+	if err != nil || record == nil {
+		// 即使没找到记录，也尝试清理数据库
+		d.deleteDownloadRecord(gid)
+		return fmt.Errorf("未找到下载记录: %s", gid)
+	}
+	filePath := filepath.Join(record.Dir, record.Filename)
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("删除本地文件失败: %w", err)
+	}
+	return d.deleteDownloadRecord(gid)
 }
 
 // syncOneDownloadStatus 从 aria2 查询单个 GID 的真实状态并同步到 SQLite
