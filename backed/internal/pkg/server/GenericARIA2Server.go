@@ -204,6 +204,12 @@ func (g *GenericARIA2Server) ensureConnected() error {
 	}
 	g.rpcClient = client
 	log.Println("[Aria2Service] RPC 重连成功")
+
+	// 重新订阅 aria2 事件（旧客户端上的订阅在新连接上不存在）
+	if g.downloadCtrl != nil {
+		g.downloadCtrl.SubscribeToEvents()
+	}
+
 	return nil
 }
 

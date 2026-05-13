@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { h, onMounted } from 'vue'
+import { h, ref, onMounted } from 'vue'
 import { NButton, NTag, NProgress, NSpace, useMessage, useDialog } from 'naive-ui'
+import type { DataTableRowKey } from 'naive-ui'
 import { Remove, ContinueDownload, DeleteWithLocalFile } from '@bindings/changeme/backed/internal/pkg/server/config'
 import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
 import { useDownloadStore } from '@/stores/download'
@@ -10,6 +11,8 @@ import TablePage from '@/components/table/index.vue'
 const message = useMessage()
 const dialog = useDialog()
 const store = useDownloadStore()
+
+const checkedRowKeys = ref<DataTableRowKey[]>([])
 
 const statusMap: Record<string, { label: string; type: 'warning' | 'error' }> = {
   paused: { label: '已暂停', type: 'warning' },
@@ -37,7 +40,44 @@ async function handleContinue(gid: string) {
   } catch (e: any) { message.error('继续下载失败: ' + e) }
 }
 
+// ==================== 批量操作 ====================
+
+function getSelectedGIDs(): string[] {
+  return checkedRowKeys.value.map(k => String(k))
+}
+
+async function handleBatchRetry() {
+  const gids = getSelectedGIDs()
+  if (!gids.length) return
+  let ok = 0
+  for (const gid of gids) {
+    try { await ContinueDownload(gid); ok++ } catch (e: any) { /* skip */ }
+  }
+  message.success(`已重试 ${ok} 个任务`)
+  checkedRowKeys.value = []
+}
+
+function handleBatchDelete() {
+  const gids = getSelectedGIDs()
+  if (!gids.length) return
+  dialog.warning({
+    title: '批量删除',
+    content: `确认删除 ${gids.length} 个任务并删除本地文件？此操作不可恢复`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      let ok = 0
+      for (const gid of gids) {
+        try { await Remove(gid); await DeleteWithLocalFile(gid); ok++ } catch (e: any) { /* skip */ }
+      }
+      message.success(`已删除 ${ok} 个任务`)
+      checkedRowKeys.value = []
+    }
+  })
+}
+
 const columns = [
+  { type: 'selection' as const },
   { title: '文件名', key: 'filename', ellipsis: { tooltip: true }, minWidth: 120,
     render(row: DownloadRecord) { return row.filename || row.url?.split('/').pop() || row.gid?.slice(0, 8) } },
   { title: '大小', key: 'total_length', minWidth: 80, width: 100,
@@ -95,5 +135,30 @@ onMounted(() => {
     empty-description="暂无未完成的任务"
     :columns="columns"
     :data="store.unfinishedDownloads"
-  />
+    :checked-row-keys="checkedRowKeys"
+    @update:checked-row-keys="checkedRowKeys = $event"
+  >
+    <template #batch-actions>
+      <div v-if="checkedRowKeys.length > 0" class="batch-bar">
+        <span class="batch-label">已选 {{ checkedRowKeys.length }} 项</span>
+        <n-button size="small" type="primary" @click="handleBatchRetry">批量重试</n-button>
+        <n-button size="small" type="error" @click="handleBatchDelete">批量删除</n-button>
+      </div>
+    </template>
+  </TablePage>
 </template>
+
+<style scoped>
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 4px;
+  flex-shrink: 0;
+}
+.batch-label {
+  font-size: 13px;
+  color: #666;
+  margin-right: 4px;
+}
+</style>

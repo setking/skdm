@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import type { DataTableColumns } from 'naive-ui'
+import type { DataTableColumns, DataTableRowKey } from 'naive-ui'
 
-defineProps<{
+const props = defineProps<{
   title: string
   count: number
   columns: DataTableColumns<Record<string, unknown>>
   data: Record<string, unknown>[]
+  checkedRowKeys?: DataTableRowKey[]
+  rowKey?: string
 }>()
+
+const emit = defineEmits<{
+  'update:checkedRowKeys': [keys: DataTableRowKey[]]
+}>()
+
+function onCheckedKeys(keys: DataTableRowKey[]) {
+  emit('update:checkedRowKeys', keys)
+}
 </script>
 
 <template>
@@ -19,9 +29,20 @@ defineProps<{
         </slot>
       </div>
     </div>
+    <slot name="batch-actions" />
     <div class="table-area">
-      <n-data-table :columns="columns" :data="data" :bordered="false" striped size="small"
-        flex-height style="height: 100%; width: 100%" />
+      <n-data-table
+        :columns="columns"
+        :data="data"
+        :bordered="false"
+        striped
+        size="small"
+        flex-height
+        style="height: 100%; width: 100%"
+        :row-key="(row: Record<string, unknown>) => row[props.rowKey || 'gid'] as DataTableRowKey"
+        :checked-row-keys="checkedRowKeys"
+        :on-update:checked-row-keys="onCheckedKeys"
+      />
     </div>
   </div>
 </template>
