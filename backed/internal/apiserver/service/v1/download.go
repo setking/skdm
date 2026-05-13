@@ -12,6 +12,8 @@ type DownloadSrv interface {
 	UpdateDownloadStatus(gid, status string, completedLength, totalLength, downloadSpeed int64, errorCode int, errorMessage string) error
 	UpdateDownloadProgress(gid string, completedLength, totalLength, downloadSpeed int64) error
 	DeleteDownload(gid string) error
+	SoftDeleteDownload(gid string) error
+	RestoreDownload(gid string) error
 	FindDownloadByURL(url string) (*dv1.DownloadRecord, error)
 	GetDownload(gid string) (*dv1.DownloadRecord, error)
 	ListDownloads(status string, offset, limit int) ([]dv1.DownloadRecord, int, error)
@@ -35,6 +37,14 @@ func (d downloadService) UpdateDownloadProgress(gid string, completedLength, tot
 
 func (d downloadService) DeleteDownload(gid string) error {
 	return d.store.Downloads().DeleteDownload(gid)
+}
+
+func (d downloadService) SoftDeleteDownload(gid string) error {
+	return d.store.Downloads().SoftDeleteDownload(gid)
+}
+
+func (d downloadService) RestoreDownload(gid string) error {
+	return d.store.Downloads().RestoreDownload(gid)
 }
 
 func (d downloadService) FindDownloadByURL(url string) (*dv1.DownloadRecord, error) {

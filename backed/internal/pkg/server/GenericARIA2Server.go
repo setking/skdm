@@ -103,7 +103,9 @@ func (g *GenericARIA2Server) ServiceStartup() error {
 	time.Sleep(2 * time.Second)
 
 	wsUrl := fmt.Sprintf("%s:%s/jsonrpc", g.Endpoint, g.rpcPort)
-	g.rpcClient, err = arigo.Dial(wsUrl, g.rpcSecret)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	g.rpcClient, err = arigo.DialContext(ctx, wsUrl, g.rpcSecret)
 	if err != nil {
 		return fmt.Errorf("连接 RPC 服务失败: %w", err)
 	}
@@ -175,16 +177,28 @@ func (g *GenericARIA2Server) ensureConnected() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
+	// Liveness check: 用 goroutine + timeout 防止 GetVersion 在断开的 WebSocket 上无限阻塞
 	if g.rpcClient != nil {
-		_, err := g.rpcClient.GetVersion()
-		if err == nil {
-			return nil
+		alive := make(chan error, 1)
+		go func() {
+			_, err := g.rpcClient.GetVersion()
+			alive <- err
+		}()
+		select {
+		case err := <-alive:
+			if err == nil {
+				return nil
+			}
+			log.Printf("[Aria2Service] RPC 连接已断开: %v，尝试重连...", err)
+		case <-time.After(5 * time.Second):
+			log.Printf("[Aria2Service] RPC 连接探测超时，强制重连...")
 		}
-		log.Printf("[Aria2Service] RPC 连接已断开: %v，尝试重连...", err)
 	}
 
 	wsUrl := fmt.Sprintf("%s:%s/jsonrpc", g.Endpoint, g.rpcPort)
-	client, err := arigo.Dial(wsUrl, g.rpcSecret)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client, err := arigo.DialContext(ctx, wsUrl, g.rpcSecret)
 	if err != nil {
 		return fmt.Errorf("重连 RPC 服务失败: %w", err)
 	}
@@ -286,6 +300,11 @@ func (g *GenericARIA2Server) GetDefaultDownloadDir() (string, error) {
 // FindDownloadByURL 根据 URL 查找已存在的下载记录
 func (g *GenericARIA2Server) FindDownloadByURL(url string) (*dv1.DownloadRecord, error) {
 	return g.downloadCtrl.FindDownloadByURL(url)
+}
+
+// CleanDuplicateByURL 清理同 URL 的旧下载记录和 aria2 缓存（如有暂停先解锁）
+func (g *GenericARIA2Server) CleanDuplicateByURL(url string) error {
+	return g.downloadCtrl.CleanDuplicateByURL(url)
 }
 
 // DeleteDownloadRecord 删除下载记录

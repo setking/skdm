@@ -1,13 +1,12 @@
 package sys
 
 import (
+	"changeme/backed/cmd"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
-
-	"changeme/backed/pkg/version"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -25,25 +24,35 @@ type UpdateCheckResult struct {
 	CurrentVersion string `json:"current_version"`
 	LatestVersion  string `json:"latest_version"`
 	ReleaseURL     string `json:"release_url"`
+	ReleaseNotes   string `json:"release_notes"`
+	DownloadURL    string `json:"download_url"`
 	Error          string `json:"error,omitempty"`
 }
 
 // GitHubRelease 表示 GitHub Release API 响应的部分字段
 type GitHubRelease struct {
-	TagName string `json:"tag_name"`
-	HTMLURL string `json:"html_url"`
+	TagName string        `json:"tag_name"`
+	HTMLURL string        `json:"html_url"`
+	Body    string        `json:"body"`
+	Assets  []GitHubAsset `json:"assets"`
+}
+
+// GitHubAsset 表示 GitHub Release 中的附件
+type GitHubAsset struct {
+	Name               string `json:"name"`
+	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
 // GetAppVersion 返回当前应用版本号
 func GetAppVersion() string {
-	return version.AppVersion
+	return cmd.AppVersion
 }
 
 // CheckForUpdate 检查 GitHub Release 是否有新版本
 func CheckForUpdate() *UpdateCheckResult {
 	result := &UpdateCheckResult{
 		HasUpdate:      false,
-		CurrentVersion: version.AppVersion,
+		CurrentVersion: cmd.AppVersion,
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -67,7 +76,12 @@ func CheckForUpdate() *UpdateCheckResult {
 
 	result.LatestVersion = extractVersionFromTag(release.TagName)
 	result.ReleaseURL = release.HTMLURL
-	result.HasUpdate = compareVersions(result.LatestVersion, version.AppVersion) > 0
+	result.ReleaseNotes = release.Body
+	// 取第一个附件作为下载链接
+	if len(release.Assets) > 0 {
+		result.DownloadURL = release.Assets[0].BrowserDownloadURL
+	}
+	result.HasUpdate = compareVersions(result.LatestVersion, cmd.AppVersion) > 0
 	return result
 }
 

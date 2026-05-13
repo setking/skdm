@@ -21,6 +21,7 @@ async function handleDelete(gid: string) {
       try {
         await RemoveDownloadResult(gid).catch(() => {})
         await DeleteWithLocalFile(gid)
+        await DeleteDownloadRecord(gid).catch(() => {})
         message.success('已永久删除')
       } catch (e: any) { message.error('删除失败: ' + e) }
     }

@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useMessage, useDialog } from 'naive-ui'
 import { DownloadOutline, FolderOpenOutline, LinkOutline } from '@vicons/ionicons5'
 import { Dialogs } from '@wailsio/runtime'
-import { AddURI, GetDefaultDownloadDir, FindDownloadByURL, DeleteDownloadRecord } from '@bindings/changeme/backed/internal/pkg/server/config'
-import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
+import { AddURI, GetDefaultDownloadDir, FindDownloadByURL } from '@bindings/changeme/backed/internal/pkg/server/config'
 import type { CancellablePromiseLike } from '@wailsio/runtime'
 import { Options } from '@bindings/github.com/siku2/arigo'
 
@@ -21,6 +20,7 @@ const savePath = ref('./download')
 const fileName = ref('')
 const loading = ref(false)
 const message = useMessage()
+const dialog = useDialog()
 
 // 持有当前 AddURI 请求的引用，用于取消
 let pendingPromise: CancellablePromiseLike<unknown> | null = null
@@ -146,35 +146,9 @@ function parseDownloadError(err: unknown): string {
   return `添加下载失败: ${short}`
 }
 
-/** 重复检测结果 */
-type DuplicateResult =
-  | { action: 'block'; reason: string }    // 禁止添加
-  | { action: 'confirm'; record: DownloadRecord }  // 需用户确认
-  | { action: 'retry'; oldGid: string }   // 自动覆盖并重试
-  | { action: 'fresh' }                    // 无重复，正常添加
-
-async function checkDuplicate(rawUrl: string): Promise<DuplicateResult> {
-  try {
-    const existing = await FindDownloadByURL(rawUrl)
-    if (!existing) return { action: 'fresh' }
-
-    switch (existing.status) {
-      case 'active':
-      case 'waiting':
-      case 'paused':
-        return { action: 'block', reason: '该任务已在下载队列中，不能重复添加' }
-      case 'complete':
-        return { action: 'confirm', record: existing }
-      case 'error':
-      case 'removed':
-        return { action: 'retry', oldGid: existing.gid }
-      default:
-        return { action: 'fresh' }
-    }
-  } catch {
-    // 查询失败时放行
-    return { action: 'fresh' }
-  }
+const STATUS_LABELS: Record<string, string> = {
+  active: '正在下载', waiting: '等待中', paused: '已暂停',
+  complete: '已完成', error: '出错', removed: '已删除',
 }
 
 async function handleOk() {
@@ -183,38 +157,25 @@ async function handleOk() {
 
   loading.value = true
   try {
-    // 1. 检查重复
-    const dup = await checkDuplicate(rawUrl)
-
-    // 2. 已在队列中 → 阻止
-    if (dup.action === 'block') {
-      message.warning(dup.reason)
-      return
-    }
-
-    // 3. 已完成 → 询问用户是否重新下载
-    if (dup.action === 'confirm') {
+    // 1. 存在同链接任务 → 确认后立刻停止并覆盖
+    const existing = await FindDownloadByURL(rawUrl).catch(() => null)
+    if (existing) {
+      const prevName = existing.filename || existing.url
+      const statusLabel = STATUS_LABELS[existing.status] || existing.status
       const confirmed = await new Promise<boolean>((resolve) => {
-        const prevName = dup.record.filename || dup.record.url
-        Dialogs.Question({
-          Title: '确认重新下载',
-          Message: `（${prevName}）已经有相同的任务。\n是否重新下载？重新下载将覆盖之前的任务记录。`,
-          Buttons: [{ Label: '重新下载', IsDefault: true }, { Label: '取消', IsCancel: true }],
-        }).then((resp: string) => {
-          resolve(resp === '重新下载')
-        }).catch(() => resolve(false))
+        dialog.warning({
+          title: '链接已存在',
+          content: `（${prevName}）已经有相同的下载链接（状态：${statusLabel}）。\n是否覆盖并重新下载？`,
+          positiveText: '覆盖下载',
+          negativeText: '取消',
+          onPositiveClick: () => resolve(true),
+          onNegativeClick: () => resolve(false),
+          onClose: () => resolve(false),
+        })
       })
       if (!confirmed) return
-      // 删除旧记录
-      await DeleteDownloadRecord(dup.record.gid).catch(() => {})
     }
-
-    // 4. 出错/已删除 → 自动覆盖重试
-    if (dup.action === 'retry') {
-      await DeleteDownloadRecord(dup.oldGid).catch(() => {})
-    }
-
-    // 5. 提交新下载
+    // 2. 提交新下载（AddURI 内部自动处理同 URL 清理）
     const options = new Options({
       dir: savePath.value || undefined,
       out: fileName.value || undefined,
@@ -258,8 +219,8 @@ function resetForm() {
 </script>
 
 <template>
-  <n-modal :show="show" :on-update:show="(val: boolean) => { if (!val) handleCancel() }"
-    title="新建下载任务" preset="card" style="width: 520px">
+  <n-modal :show="show" :on-update:show="(val: boolean) => { if (!val) handleCancel() }" title="新建下载任务" preset="card"
+    style="width: 520px">
     <div class="dialog-body">
       <!-- Download link -->
       <div class="field">

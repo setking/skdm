@@ -1,4 +1,4 @@
-import { ref, reactive, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { Events } from '@wailsio/runtime'
 import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
@@ -27,28 +27,28 @@ export const useDownloadStore = defineStore('downloads', () => {
     )
   })
 
-  /** 正在下载 (active, waiting, paused) */
+  /** 正在下载 (active, waiting, paused) — 排除已删除 */
   const runningDownloads = computed<DownloadRecord[]>(() =>
     allDownloads.value.filter(d =>
-      d.status === 'active' || d.status === 'waiting' || d.status === 'paused'
+      d.deleted !== 1 && (d.status === 'active' || d.status === 'waiting' || d.status === 'paused')
     )
   )
 
-  /** 未完成 (error, paused) */
+  /** 未完成 (error, paused) — 排除已删除 */
   const unfinishedDownloads = computed<DownloadRecord[]>(() =>
     allDownloads.value.filter(d =>
-      d.status === 'error' || d.status === 'paused'
+      d.deleted !== 1 && (d.status === 'error' || d.status === 'paused')
     )
   )
 
-  /** 已完成 */
+  /** 已完成 — 排除已删除 */
   const completedDownloads = computed<DownloadRecord[]>(() =>
-    allDownloads.value.filter(d => d.status === 'complete')
+    allDownloads.value.filter(d => d.deleted !== 1 && d.status === 'complete')
   )
 
-  /** 回收站 */
+  /** 回收站 — 仅已删除 */
   const trashedDownloads = computed<DownloadRecord[]>(() =>
-    allDownloads.value.filter(d => d.status === 'removed')
+    allDownloads.value.filter(d => d.deleted === 1)
   )
 
   // ==================== 初始化 ====================

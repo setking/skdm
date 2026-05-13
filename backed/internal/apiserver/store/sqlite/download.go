@@ -28,12 +28,12 @@ func (d *download) InsertDownload(ctx context.Context, dw *dv1.DownloadRecord) e
 		INSERT INTO downloads (
 			gid, url, dir, filename,
 			total_length, completed_length, download_speed,
-			status, error_code, error_message,
+			status, error_code, error_message, deleted,
 			created_at, updated_at, completed_at
 		) VALUES (
 			:gid, :url, :dir, :filename,
 			:total_length, :completed_length, :download_speed,
-			:status, :error_code, :error_message,
+			:status, :error_code, :error_message, :deleted,
 			:created_at, :updated_at, :completed_at
 		)
 	`, dw)
@@ -69,9 +69,23 @@ func (d *download) UpdateDownloadProgress(gid string, completedLength, totalLeng
 	return err
 }
 
-// DeleteDownload 删除下载记录
+// DeleteDownload 硬删除下载记录
 func (d *download) DeleteDownload(gid string) error {
 	_, err := d.db.Exec(`DELETE FROM downloads WHERE gid=?`, gid)
+	return err
+}
+
+// SoftDeleteDownload 软删除：标记 deleted=1（记录留在回收站）
+func (d *download) SoftDeleteDownload(gid string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := d.db.Exec(`UPDATE downloads SET deleted=1, updated_at=? WHERE gid=?`, now, gid)
+	return err
+}
+
+// RestoreDownload 从回收站恢复：标记 deleted=0
+func (d *download) RestoreDownload(gid string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := d.db.Exec(`UPDATE downloads SET deleted=0, updated_at=? WHERE gid=?`, now, gid)
 	return err
 }
 
@@ -80,13 +94,13 @@ func (d *download) DeleteDownload(gid string) error {
 func (d *download) FindDownloadByURL(url string) (*dv1.DownloadRecord, error) {
 	row := d.db.QueryRow(
 		`SELECT gid, url, dir, filename, total_length, completed_length, download_speed,
-		 status, error_code, error_message, created_at, updated_at, completed_at
+		 status, error_code, error_message, deleted, created_at, updated_at, completed_at
 		 FROM downloads WHERE url=? ORDER BY created_at DESC LIMIT 1`, url,
 	)
 	dw := &dv1.DownloadRecord{}
 	err := row.Scan(&dw.GID, &dw.URL, &dw.Dir, &dw.Filename,
 		&dw.TotalLength, &dw.CompletedLength, &dw.DownloadSpeed,
-		&dw.Status, &dw.ErrorCode, &dw.ErrorMessage,
+		&dw.Status, &dw.ErrorCode, &dw.ErrorMessage, &dw.Deleted,
 		&dw.CreatedAt, &dw.UpdatedAt, &dw.CompletedAt)
 	if err != nil {
 		return nil, err
@@ -98,13 +112,13 @@ func (d *download) FindDownloadByURL(url string) (*dv1.DownloadRecord, error) {
 func (d *download) GetDownload(gid string) (*dv1.DownloadRecord, error) {
 	row := d.db.QueryRow(
 		`SELECT gid, url, dir, filename, total_length, completed_length, download_speed,
-		 status, error_code, error_message, created_at, updated_at, completed_at
+		 status, error_code, error_message, deleted, created_at, updated_at, completed_at
 		 FROM downloads WHERE gid=?`, gid,
 	)
 	dw := &dv1.DownloadRecord{}
 	err := row.Scan(&dw.GID, &dw.URL, &dw.Dir, &dw.Filename,
 		&dw.TotalLength, &dw.CompletedLength, &dw.DownloadSpeed,
-		&dw.Status, &dw.ErrorCode, &dw.ErrorMessage,
+		&dw.Status, &dw.ErrorCode, &dw.ErrorMessage, &dw.Deleted,
 		&dw.CreatedAt, &dw.UpdatedAt, &dw.CompletedAt)
 	if err != nil {
 		return nil, err
@@ -125,7 +139,7 @@ func (d *download) ListDownloads(status string, offset, limit int) ([]dv1.Downlo
 		}
 		rows, err = d.db.Query(
 			`SELECT gid, url, dir, filename, total_length, completed_length, download_speed,
-			 status, error_code, error_message, created_at, updated_at, completed_at
+			 status, error_code, error_message, deleted, created_at, updated_at, completed_at
 			 FROM downloads ORDER BY created_at DESC LIMIT ? OFFSET ?`,
 			limit, offset,
 		)
@@ -136,7 +150,7 @@ func (d *download) ListDownloads(status string, offset, limit int) ([]dv1.Downlo
 		}
 		rows, err = d.db.Query(
 			`SELECT gid, url, dir, filename, total_length, completed_length, download_speed,
-			 status, error_code, error_message, created_at, updated_at, completed_at
+			 status, error_code, error_message, deleted, created_at, updated_at, completed_at
 			 FROM downloads WHERE status=? ORDER BY created_at DESC LIMIT ? OFFSET ?`,
 			status, limit, offset,
 		)
@@ -151,7 +165,7 @@ func (d *download) ListDownloads(status string, offset, limit int) ([]dv1.Downlo
 		var d dv1.DownloadRecord
 		if err := rows.Scan(&d.GID, &d.URL, &d.Dir, &d.Filename,
 			&d.TotalLength, &d.CompletedLength, &d.DownloadSpeed,
-			&d.Status, &d.ErrorCode, &d.ErrorMessage,
+			&d.Status, &d.ErrorCode, &d.ErrorMessage, &d.Deleted,
 			&d.CreatedAt, &d.UpdatedAt, &d.CompletedAt); err != nil {
 			return nil, 0, err
 		}

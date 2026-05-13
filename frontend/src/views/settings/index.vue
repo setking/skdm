@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   NForm, NFormItem, NInput, NInputNumber, NSwitch, NButton,
   NCard, NSpin, NTag, useMessage
@@ -80,28 +80,15 @@ async function handleSave() {
 /** 手动检查更新（用户点击按钮触发） */
 async function handleCheckUpdate() {
   await updateStore.manualCheck()
-  showUpdateResult()
-}
-
-/** 根据缓存的更新检查结果显示提示 */
-function showUpdateResult() {
+  // 有更新 → 全局弹窗自动显示；仅处理无更新和错误情况
   const r = updateStore.result
   if (!r) return
   if (r.error) {
     message.error('检查更新失败: ' + r.error)
-  } else if (r.has_update) {
-    message.info(`发现新版本 v${r.latest_version}，当前版本 v${r.current_version}`, { duration: 8000 })
-  } else {
+  } else if (!r.has_update) {
     message.success('已是最新版本')
   }
 }
-
-// 监听后端启动时自动发送的更新检查结果
-watch(() => updateStore.result, (r) => {
-  if (r && form.value.auto_check_update) {
-    showUpdateResult()
-  }
-})
 
 onMounted(async () => {
   await loadSettings()

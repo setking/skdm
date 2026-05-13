@@ -5,3 +5,5 @@ aria2:
   endpoint: "ws://localhost"
 sqlite:
   database_path: 'data/app.db'
+app:
+  version: 0.2.0

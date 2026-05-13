@@ -241,8 +241,38 @@ func (d *DownloadController) pushAllDownloadsToFrontend() {
 
 // ==================== 添加下载 ====================
 
-// AddURI 添加下载链接
+// AddURI 添加下载链接。
+// 若已存在同 URL 的下载记录，自动清理旧记录（含 aria2 缓存）后再创建新任务。
 func (d *DownloadController) AddURI(uris []string, options *arigo.Options) (arigo.GID, error) {
+	// 清理同 URL 的旧记录（数据库同步删，aria2 后台 goroutine 清理）
+	if len(uris) > 0 {
+		record, _ := d.srv.Downloads().FindDownloadByURL(uris[0])
+		if record != nil {
+			d.deleteDownloadRecord(record.GID)
+			gid := record.GID
+			wasPaused := record.Status == "paused"
+			go func() {
+				done := make(chan struct{})
+				go func() {
+					defer close(done)
+					c, err := d.rpc.Client()
+					if err != nil {
+						return
+					}
+					if wasPaused {
+						c.Unpause(gid)
+					}
+					c.ForceRemove(gid)
+					c.RemoveDownloadResult(gid)
+				}()
+				select {
+				case <-done:
+				case <-time.After(15 * time.Second):
+				}
+			}()
+		}
+	}
+
 	c, err := d.rpc.Client()
 	if err != nil {
 		return arigo.GID{}, err
@@ -402,7 +432,7 @@ func (d *DownloadController) UnpauseAll() error {
 
 // ==================== 删除任务 ====================
 
-// Remove 删除指定下载任务
+// Remove 删除指定下载任务，标记 deleted=1 放入回收站
 func (d *DownloadController) Remove(gid string) error {
 	c, err := d.rpc.Client()
 	if err != nil {
@@ -411,14 +441,20 @@ func (d *DownloadController) Remove(gid string) error {
 	err = c.Remove(gid)
 	if err != nil && strings.Contains(err.Error(), "not found") {
 		d.syncOneDownloadStatus(gid)
-		d.srv.Downloads().UpdateDownloadStatus(gid, "removed", 0, 0, 0, 0, "")
+		d.srv.Downloads().SoftDeleteDownload(gid)
 		d.fetchAndPush(gid)
 		return nil
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	// Remove 成功：软删除，记录保留在回收站
+	d.srv.Downloads().SoftDeleteDownload(gid)
+	d.fetchAndPush(gid)
+	return nil
 }
 
-// ForceRemove 强制删除指定下载任务
+// ForceRemove 强制删除指定下载任务，标记 deleted=1 放入回收站
 func (d *DownloadController) ForceRemove(gid string) error {
 	c, err := d.rpc.Client()
 	if err != nil {
@@ -427,11 +463,17 @@ func (d *DownloadController) ForceRemove(gid string) error {
 	err = c.ForceRemove(gid)
 	if err != nil && strings.Contains(err.Error(), "not found") {
 		d.syncOneDownloadStatus(gid)
-		d.srv.Downloads().UpdateDownloadStatus(gid, "removed", 0, 0, 0, 0, "")
+		d.srv.Downloads().SoftDeleteDownload(gid)
 		d.fetchAndPush(gid)
 		return nil
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	// ForceRemove 成功：软删除，记录保留在回收站
+	d.srv.Downloads().SoftDeleteDownload(gid)
+	d.fetchAndPush(gid)
+	return nil
 }
 
 // Delete 删除下载任务并同时删除已下载的文件
@@ -594,7 +636,7 @@ func (d *DownloadController) RemoveDownloadResult(gid string) error {
 
 // ==================== 继续下载（断点续传） ====================
 
-// ContinueDownload 从 SQLite 历史记录中取出下载参数，重新提交
+// ContinueDownload 从回收站恢复并重新提交下载
 func (d *DownloadController) ContinueDownload(gid string) (arigo.GID, error) {
 	record, err := d.srv.Downloads().GetDownload(gid)
 	if err != nil {
@@ -608,7 +650,11 @@ func (d *DownloadController) ContinueDownload(gid string) (arigo.GID, error) {
 	if err != nil {
 		return arigo.GID{}, err
 	}
-	d.srv.Downloads().DeleteDownload(gid)
+	// 旧记录软删除 + 推送到前端
+	d.srv.Downloads().SoftDeleteDownload(gid)
+	d.fetchAndPush(gid)
+	// 新记录推送到前端（立即刷新 UI）
+	d.fetchAndPush(gid2.GID)
 	return gid2, nil
 }
 
@@ -631,6 +677,50 @@ func (d *DownloadController) FindDownloadByURL(url string) (*dv1.DownloadRecord,
 		return nil, nil
 	}
 	return dr, nil
+}
+
+// CleanDuplicateByURL 清理同 URL 的旧下载记录和 aria2 缓存。
+// SQLite 删除同步进行；aria2 RPC 清理放入后台 goroutine（带超时保护），
+// 防止 WebSocket 断连导致前端永久挂起。
+// 若不存在同 URL 记录则直接返回 nil。
+func (d *DownloadController) CleanDuplicateByURL(url string) error {
+	record, err := d.srv.Downloads().FindDownloadByURL(url)
+	if err != nil || record == nil {
+		return nil
+	}
+
+	// 先删除 SQLite 记录（不依赖 RPC，保证立刻生效）
+	if err := d.deleteDownloadRecord(record.GID); err != nil {
+		return fmt.Errorf("删除旧下载记录失败: %w", err)
+	}
+
+	// aria2 清理放入后台 goroutine，带超时保护，防止 rpc2.Call 阻塞
+	gid := record.GID
+	wasPaused := record.Status == "paused"
+	go func() {
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			c, err := d.rpc.Client()
+			if err != nil {
+				log.Printf("[CleanDuplicateByURL] 连接 aria2 失败: %v", err)
+				return
+			}
+			if wasPaused {
+				c.Unpause(gid)
+			}
+			c.ForceRemove(gid)
+			c.RemoveDownloadResult(gid)
+		}()
+		select {
+		case <-done:
+			log.Printf("[CleanDuplicateByURL] 已清理 aria2 缓存 GID=%s URL=%s", gid, url)
+		case <-time.After(15 * time.Second):
+			log.Printf("[CleanDuplicateByURL] aria2 清理超时 GID=%s URL=%s", gid, url)
+		}
+	}()
+
+	return nil
 }
 
 // ==================== 内部辅助方法 ====================
@@ -685,38 +775,45 @@ func (d *DownloadController) deleteDownloadRecord(gid string) error {
 	return nil
 }
 
-// OpenFileLocation 在文件管理器中打开下载文件所在目录并选中该文件
+// OpenFileLocation 打开下载文件所在目录。仅已完成的任务选中文件。
 func (d *DownloadController) OpenFileLocation(gid string) error {
 	record, err := d.srv.Downloads().GetDownload(gid)
 	if err != nil || record == nil {
 		return fmt.Errorf("未找到下载记录: %s", gid)
 	}
-	filePath := filepath.Join(record.Dir, record.Filename)
+
+	selectFile := record.Status == "complete"
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
-		cmd = exec.Command("explorer", "/select,", filePath)
+		if selectFile {
+			cmd = exec.Command("explorer", "/select,", filepath.Join(record.Dir, record.Filename))
+		} else {
+			cmd = exec.Command("explorer", record.Dir)
+		}
 	case "darwin":
-		cmd = exec.Command("open", "-R", filePath)
+		if selectFile {
+			cmd = exec.Command("open", "-R", filepath.Join(record.Dir, record.Filename))
+		} else {
+			cmd = exec.Command("open", record.Dir)
+		}
 	default:
 		cmd = exec.Command("xdg-open", record.Dir)
 	}
 	return cmd.Start()
 }
 
-// DeleteWithLocalFile 删除数据库记录并同时删除本地下载文件
+// DeleteWithLocalFile 仅删除本地下载文件，不触碰数据库记录（记录留在回收站）
 func (d *DownloadController) DeleteWithLocalFile(gid string) error {
 	record, err := d.srv.Downloads().GetDownload(gid)
 	if err != nil || record == nil {
-		// 即使没找到记录，也尝试清理数据库
-		d.deleteDownloadRecord(gid)
 		return fmt.Errorf("未找到下载记录: %s", gid)
 	}
 	filePath := filepath.Join(record.Dir, record.Filename)
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("删除本地文件失败: %w", err)
 	}
-	return d.deleteDownloadRecord(gid)
+	return nil
 }
 
 // syncOneDownloadStatus 从 aria2 查询单个 GID 的真实状态并同步到 SQLite

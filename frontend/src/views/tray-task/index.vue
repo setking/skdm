@@ -19,7 +19,9 @@ function onUpdateShow(val: boolean) {
   <n-config-provider :theme="lightTheme">
     <n-global-style />
     <n-message-provider>
-      <DownloadDialog :show="show" @update:show="onUpdateShow" />
+      <n-dialog-provider>
+        <DownloadDialog :show="show" @update:show="onUpdateShow" />
+      </n-dialog-provider>
     </n-message-provider>
   </n-config-provider>
 </template>

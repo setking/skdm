@@ -43,6 +43,20 @@ export class UpdateCheckResult {
              */
             this["release_url"] = "";
         }
+        if (!("release_notes" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["release_notes"] = "";
+        }
+        if (!("download_url" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["download_url"] = "";
+        }
         if (/** @type {any} */(false)) {
             /**
              * @member

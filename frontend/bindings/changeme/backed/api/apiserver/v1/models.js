@@ -85,6 +85,13 @@ export class DownloadRecord {
              */
             this["error_message"] = "";
         }
+        if (!("deleted" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["deleted"] = 0;
+        }
         if (!("created_at" in $$source)) {
             /**
              * @member

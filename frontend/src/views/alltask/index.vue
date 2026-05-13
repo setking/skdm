@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { h, onMounted } from 'vue'
 import { NButton, NTag, NProgress, NSpace, useMessage, useDialog } from 'naive-ui'
-import { Remove, DeleteDownloadRecord, ContinueDownload, RemoveDownloadResult, DeleteWithLocalFile } from '@bindings/changeme/backed/internal/pkg/server/config'
+import { Remove, ContinueDownload, DeleteWithLocalFile } from '@bindings/changeme/backed/internal/pkg/server/config'
 import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
 import { useDownloadStore } from '@/stores/download'
 import { formatBytes, formatSpeed, progressPercent } from '@/utils/format'
@@ -16,20 +16,16 @@ const statusMap: Record<string, { label: string; type: 'warning' | 'error' }> = 
   error: { label: '下载失败', type: 'error' },
 }
 
-async function handleRemove(gid: string) {
-  try { await Remove(gid) } catch (e: any) { message.warning('删除失败: ' + e) }
-}
 async function handleDelete(gid: string) {
   dialog.warning({
     title: '确认删除',
-    content: '此操作将同时删除本地下载文件，是否继续？',
+    content: '将移出下载列表并删除本地文件，此操作不可恢复',
     positiveText: '确认删除',
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        await RemoveDownloadResult(gid).catch(() => {})
+        await Remove(gid)
         await DeleteWithLocalFile(gid)
-        message.success('已永久删除')
       } catch (e: any) { message.error('删除失败: ' + e) }
     }
   })
@@ -77,7 +73,7 @@ const columns = [
       const btns: any[] = []
       if (row.status === 'paused') {
         btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'primary', onClick: () => handleContinue(row.gid) }, () => '恢复下载'))
-        btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleRemove(row.gid) }, () => '移到回收站'))
+        btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleDelete(row.gid) }, () => '删除'))
       } else if (row.status === 'error') {
         btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'primary', onClick: () => handleContinue(row.gid) }, () => '重试'))
         btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleDelete(row.gid) }, () => '删除'))

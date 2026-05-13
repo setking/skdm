@@ -7,6 +7,7 @@ import AppMain from "./main/index.vue"
 </script>
 
 <template>
+  <n-dialog-provider>
   <div class="layout">
     <div class="header">
       <Header/>
@@ -20,9 +21,7 @@ import AppMain from "./main/index.vue"
         </div>
         <div class="main">
           <n-message-provider>
-            <n-dialog-provider>
               <AppMain/>
-            </n-dialog-provider>
           </n-message-provider>
         </div>
       </div>
@@ -31,6 +30,7 @@ import AppMain from "./main/index.vue"
 <!--      <Footer/>-->
 <!--    </div>-->
   </div>
+  </n-dialog-provider>
 </template>
 <style scoped lang="scss">
 .layout {

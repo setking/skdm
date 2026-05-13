@@ -23,10 +23,10 @@ async function handlePause(gid: string) {
 async function handleUnpause(gid: string) {
   try { await Unpause(gid) } catch (e: any) { message.warning('恢复失败: ' + e) }
 }
-async function handleRemove(gid: string) {
+async function handleDelete(gid: string) {
   dialog.warning({
     title: '确认删除',
-    content: '将此任务移出下载列表并删除本地已下载文件，是否继续？',
+    content: '将移出下载列表并删除本地文件，此操作不可恢复',
     positiveText: '确认删除',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -81,10 +81,10 @@ const columns = [
       const btns: any[] = []
       if (row.status === 'active' || row.status === 'waiting') {
         btns.push(h(NButton, { size: 'tiny', quaternary: true, onClick: () => handlePause(row.gid) }, () => '暂停'))
-        btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleRemove(row.gid) }, () => '删除'))
+        btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleDelete(row.gid) }, () => '删除'))
       } else if (row.status === 'paused') {
         btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'primary', onClick: () => handleUnpause(row.gid) }, () => '继续'))
-        btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleRemove(row.gid) }, () => '删除'))
+        btns.push(h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleDelete(row.gid) }, () => '删除'))
       }
       return h(NSpace, { size: 4 }, () => btns)
     }

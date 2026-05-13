@@ -9,16 +9,22 @@ export interface UpdateCheckResult {
   current_version: string
   latest_version: string
   release_url: string
+  release_notes: string
+  download_url: string
   error: string
 }
 
 export const useUpdateStore = defineStore('update', () => {
   const result = ref<UpdateCheckResult | null>(null)
   const checking = ref(false)
+  const showDialog = ref(false)
 
   /** 订阅启动时自动检查结果（后端仅 emit 一次） */
   Events.On('update-check', (ev: { data: UpdateCheckResult }) => {
     result.value = ev.data
+    if (ev.data?.has_update) {
+      showDialog.value = true
+    }
   })
 
   /** 手动检查更新 */
@@ -31,7 +37,12 @@ export const useUpdateStore = defineStore('update', () => {
         current_version: r?.current_version ?? '',
         latest_version: r?.latest_version ?? '',
         release_url: r?.release_url ?? '',
+        release_notes: r?.release_notes ?? '',
+        download_url: r?.download_url ?? '',
         error: r?.error ?? '',
+      }
+      if (result.value.has_update) {
+        showDialog.value = true
       }
       return result.value
     } finally {
@@ -39,9 +50,15 @@ export const useUpdateStore = defineStore('update', () => {
     }
   }
 
+  function dismissUpdate() {
+    showDialog.value = false
+  }
+
   return {
     result: readonly(result),
     checking: readonly(checking),
+    showDialog: readonly(showDialog),
     manualCheck,
+    dismissUpdate,
   }
 })

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { h, onMounted } from 'vue'
 import { NButton, NTag, NSpace, NIcon, useMessage, useDialog } from 'naive-ui'
-import { Remove, RemoveDownloadResult, DeleteWithLocalFile, OpenFileLocation } from '@bindings/changeme/backed/internal/pkg/server/config'
+import { Remove, DeleteWithLocalFile, OpenFileLocation } from '@bindings/changeme/backed/internal/pkg/server/config'
 import type { DownloadRecord } from '@bindings/changeme/backed/api/apiserver/v1'
 import { useDownloadStore } from '@/stores/download'
 import { formatBytes } from '@/utils/format'
@@ -17,20 +17,16 @@ function folderIcon() {
   ])
 }
 
-async function handleRemove(gid: string) {
-  try { await Remove(gid) } catch (e: any) { message.warning('删除失败: ' + e) }
-}
 async function handleDelete(gid: string) {
   dialog.warning({
     title: '确认删除',
-    content: '此操作将同时删除本地下载文件，是否继续？',
+    content: '将移出下载列表并删除本地文件，此操作不可恢复',
     positiveText: '确认删除',
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        await RemoveDownloadResult(gid).catch(() => {})
+        await Remove(gid)
         await DeleteWithLocalFile(gid)
-        message.success('已永久删除')
       } catch (e: any) { message.error('删除失败: ' + e) }
     }
   })
@@ -54,11 +50,10 @@ const columns = [
   { title: '状态', key: 'status', minWidth: 70, width: 80,
     render() { return h(NTag, { type: 'success', size: 'small' }, () => '已完成') }
   },
-  { title: '操作', key: 'actions', minWidth: 140, width: 180,
+  { title: '操作', key: 'actions', minWidth: 50, width: 60,
     render(row: DownloadRecord) {
       return h(NSpace, { size: 4 }, () => [
-        h(NButton, { size: 'tiny', quaternary: true, onClick: () => handleRemove(row.gid) }, () => '移到回收站'),
-        h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleDelete(row.gid) }, () => '永久删除'),
+        h(NButton, { size: 'tiny', quaternary: true, type: 'error', onClick: () => handleDelete(row.gid) }, () => '删除'),
       ])
     }
   },

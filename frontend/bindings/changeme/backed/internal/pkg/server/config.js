@@ -41,6 +41,14 @@ export function CheckForUpdate() {
 }
 
 /**
+ * @param {string} url
+ * @returns {$CancellablePromise<void>}
+ */
+export function CleanDuplicateByURL(url) {
+    return $Call.ByID(3100581179, url);
+}
+
+/**
  * @returns {$CancellablePromise<$models.CompletedConfig>}
  */
 export function Complete() {

@@ -162,6 +162,7 @@ CREATE TABLE IF NOT EXISTS downloads (
     status TEXT NOT NULL DEFAULT 'active',
     error_code INTEGER NOT NULL DEFAULT 0,
     error_message TEXT NOT NULL DEFAULT '',
+    deleted INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     completed_at TEXT
@@ -185,5 +186,18 @@ CREATE INDEX IF NOT EXISTS idx_download_events_gid ON download_events(gid);
 CREATE INDEX IF NOT EXISTS idx_downloads_status ON downloads(status);
 `
 	_, err := db.Exec(schema)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// 兼容旧表：为已存在的 downloads 表添加 deleted 列
+	var hasDeleted int
+	db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('downloads') WHERE name='deleted'").Scan(&hasDeleted)
+	if hasDeleted == 0 {
+		if _, err := db.Exec("ALTER TABLE downloads ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0"); err != nil {
+			return fmt.Errorf("添加 deleted 列失败: %w", err)
+		}
+	}
+
+	return nil
 }

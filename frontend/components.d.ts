@@ -12,14 +12,13 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     DownloadDialog: typeof import('./src/components/download-dialog/index.vue')['default']
-    Empty: typeof import('./src/components/table/empty/index.vue')['default']
     Footer: typeof import('./src/components/footer/index.vue')['default']
     Header: typeof import('./src/components/header/index.vue')['default']
     Menu: typeof import('./src/components/menu/index.vue')['default']
     NButton: typeof import('naive-ui')['NButton']
     NConfigProvider: typeof import('naive-ui')['NConfigProvider']
     NDataTable: typeof import('naive-ui')['NDataTable']
-    NEmpty: typeof import('naive-ui')['NEmpty']
+    NDialogProvider: typeof import('naive-ui')['NDialogProvider']
     NFlex: typeof import('naive-ui')['NFlex']
     NGlobalStyle: typeof import('naive-ui')['NGlobalStyle']
     NIcon: typeof import('naive-ui')['NIcon']
@@ -31,8 +30,10 @@ declare module 'vue' {
     NMessageProvider: typeof import('naive-ui')['NMessageProvider']
     NModal: typeof import('naive-ui')['NModal']
     NSpace: typeof import('naive-ui')['NSpace']
+    NTag: typeof import('naive-ui')['NTag']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Table: typeof import('./src/components/table/index.vue')['default']
+    UpdateDialog: typeof import('./src/components/update-dialog/index.vue')['default']
   }
 }

@@ -153,6 +153,12 @@ func (c *Config) FindDownloadByURL(url string) (*dv1.DownloadRecord, error) {
 	}
 	return activeServer.FindDownloadByURL(url)
 }
+func (c *Config) CleanDuplicateByURL(url string) error {
+	if activeServer == nil {
+		return errServerNotReady
+	}
+	return activeServer.CleanDuplicateByURL(url)
+}
 func (c *Config) DeleteDownloadRecord(gid string) error {
 	if activeServer == nil {
 		return errServerNotReady

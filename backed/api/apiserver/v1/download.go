@@ -12,6 +12,7 @@ type DownloadRecord struct {
 	Status          string  `db:"status" json:"status"`
 	ErrorCode       int     `db:"error_code" json:"error_code"`
 	ErrorMessage    string  `db:"error_message" json:"error_message"`
+	Deleted         int     `db:"deleted" json:"deleted"`
 	CreatedAt       string  `db:"created_at" json:"created_at"`
 	UpdatedAt       string  `db:"updated_at" json:"updated_at"`
 	CompletedAt     *string `db:"completed_at" json:"completed_at,omitempty"`

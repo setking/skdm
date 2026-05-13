@@ -4,7 +4,6 @@ import type { DataTableColumns } from 'naive-ui'
 defineProps<{
   title: string
   count: number
-  emptyDescription: string
   columns: DataTableColumns<Record<string, unknown>>
   data: Record<string, unknown>[]
 }>()
@@ -21,7 +20,6 @@ defineProps<{
       </div>
     </div>
     <div class="table-area">
-      <n-empty v-if="data.length === 0" :description="emptyDescription" class="empty-overlay" />
       <n-data-table :columns="columns" :data="data" :bordered="false" striped size="small"
         flex-height style="height: 100%; width: 100%" />
     </div>
